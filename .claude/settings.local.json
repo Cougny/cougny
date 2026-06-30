@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh auth *)",
+      "Bash(gh api *)",
+      "Bash(git init *)",
+      "Bash(git add *)",
+      "Bash(git -c user.name='yourscemal' -c commit.gpgsign=false commit -q -m \"Initial commit\")",
+      "Bash(git branch *)",
+      "Bash(gh repo *)",
+      "Bash(git -c user.name='yourscemal' -c commit.gpgsign=false commit -q -m \"Add Claude project config\")",
+      "Bash(git push *)"
+    ]
+  }
+}
