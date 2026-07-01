@@ -1,0 +1,24 @@
+@import 'tailwindcss';
+
+/*
+ * Tailwind v4 is CSS-first: theme tokens live here instead of a JS config, and
+ * content is auto-detected. `--color-brand` generates `bg-brand`, `text-brand`,
+ * `border-brand`, etc.
+ */
+@theme {
+  --color-brand: #6d28d9;
+  --color-brand-fg: #ffffff;
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-neutral-950 text-neutral-100 antialiased;
+}

@@ -1,0 +1,72 @@
+# Full containerized stack: builds and runs all three apps on top of the shared
+# infrastructure (postgres, redis, coturn) defined in infra/docker-compose.yml.
+#
+#   cp .env.example .env
+#   docker compose up -d --build          # start everything
+#   docker compose run --rm db-setup      # create tables (first run)
+#
+# For infra-only local dev (apps via `pnpm dev`), use `pnpm infra:up` instead.
+name: cougny
+
+include:
+  - infra/docker-compose.yml
+
+services:
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+      # Reach infra by compose service name (overrides the localhost .env values).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:-cougny}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+      REDIS_URL: redis://redis:6379
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: unless-stopped
+
+  signaling:
+    build:
+      context: .
+      dockerfile: apps/signaling/Dockerfile
+    env_file: .env
+    environment:
+      NODE_ENV: production
+    ports:
+      - '4001:4001'
+    restart: unless-stopped
+
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Baked into the client bundle at build time (browser-reachable URLs).
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:-http://localhost:4000}
+        NEXT_PUBLIC_SIGNALING_URL: ${NEXT_PUBLIC_SIGNALING_URL:-ws://localhost:4001}
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+      - signaling
+    restart: unless-stopped
+
+  # One-shot helper: create/sync the database schema. Not started by `up`.
+  db-setup:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: tools
+    profiles: ['tools']
+    command: ['pnpm', 'prisma', 'db', 'push']
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:-cougny}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'

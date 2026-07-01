@@ -1,0 +1,39 @@
+version: 2
+
+updates:
+  # JavaScript/TypeScript dependencies across the pnpm workspace.
+  - package-ecosystem: npm
+    directories:
+      - '/'
+      - '/apps/*'
+      - '/packages/*'
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    groups:
+      # Batch low-risk updates into single PRs to cut noise.
+      dev-dependencies:
+        dependency-type: development
+        update-types: ['minor', 'patch']
+      production-minor-patch:
+        dependency-type: production
+        update-types: ['minor', 'patch']
+    labels:
+      - dependencies
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # GitHub Actions used in CI.
+  - package-ecosystem: github-actions
+    directory: '/'
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - ci
+    commit-message:
+      prefix: chore

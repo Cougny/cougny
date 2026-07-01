@@ -1,0 +1,94 @@
+// Cougny database schema.
+// Kept intentionally small for the MVP: anonymous sessions, a record of each
+// call for safety/rate-limiting, and moderation reports. Accounts can be added
+// later without reshaping these tables.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+/// An anonymous visitor session. Cougny starts without accounts; a session is
+/// created on first visit and authorizes the signaling socket and API calls.
+model Session {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  lastSeen  DateTime @default(now())
+
+  // Coarse metadata for abuse mitigation (never shown to peers).
+  ipHash    String?
+  userAgent String?
+  locale    String?
+
+  callsAsA      Call[]   @relation("CallPeerA")
+  callsAsB      Call[]   @relation("CallPeerB")
+  reportsFiled  Report[] @relation("ReportReporter")
+  reportsAgainst Report[] @relation("ReportReported")
+
+  @@index([lastSeen])
+}
+
+enum CallEndReason {
+  SKIPPED
+  DISCONNECTED
+  REPORTED
+  ERROR
+}
+
+/// One matched 1:1 pairing. Media is peer-to-peer; only metadata is persisted.
+model Call {
+  id        String    @id @default(cuid())
+  roomId    String    @unique
+  startedAt DateTime  @default(now())
+  endedAt   DateTime?
+  endReason CallEndReason?
+
+  peerAId String
+  peerA   Session @relation("CallPeerA", fields: [peerAId], references: [id])
+  peerBId String
+  peerB   Session @relation("CallPeerB", fields: [peerBId], references: [id])
+
+  reports Report[]
+
+  @@index([peerAId])
+  @@index([peerBId])
+  @@index([startedAt])
+}
+
+enum ReportReason {
+  NUDITY
+  HARASSMENT
+  MINOR
+  SPAM
+  OTHER
+}
+
+enum ReportStatus {
+  OPEN
+  REVIEWING
+  ACTIONED
+  DISMISSED
+}
+
+/// A moderation report filed by one session against another.
+model Report {
+  id        String       @id @default(cuid())
+  createdAt DateTime     @default(now())
+  reason    ReportReason
+  status    ReportStatus @default(OPEN)
+  details   String?
+
+  callId String
+  call   Call   @relation(fields: [callId], references: [id])
+
+  reporterId String
+  reporter   Session @relation("ReportReporter", fields: [reporterId], references: [id])
+  reportedId String
+  reported   Session @relation("ReportReported", fields: [reportedId], references: [id])
+
+  @@index([status])
+  @@index([reportedId])
+}

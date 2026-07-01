@@ -1,0 +1,43 @@
+{
+  "name": "@cougny/db",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist",
+    "prisma"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "dev": "tsc -p tsconfig.json --watch",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "generate": "prisma generate",
+    "migrate": "prisma migrate dev",
+    "migrate:deploy": "prisma migrate deploy",
+    "studio": "prisma studio",
+    "lint": "eslint .",
+    "clean": "rm -rf dist .turbo *.tsbuildinfo"
+  },
+  "dependencies": {
+    "@prisma/adapter-pg": "^7.8.0",
+    "@prisma/client": "^7.8.0"
+  },
+  "devDependencies": {
+    "@cougny/config-eslint": "workspace:*",
+    "@cougny/config-typescript": "workspace:*",
+    "@types/node": "^26.1.0",
+    "dotenv": "^17.4.2",
+    "eslint": "^10.6.0",
+    "prisma": "^7.8.0",
+    "typescript": "^6.0.3"
+  }
+}

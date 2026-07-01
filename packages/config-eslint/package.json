@@ -1,0 +1,21 @@
+{
+  "name": "@cougny/config-eslint",
+  "version": "0.0.0",
+  "private": true,
+  "license": "UNLICENSED",
+  "type": "module",
+  "exports": {
+    "./base": "./base.js",
+    "./next": "./next.js"
+  },
+  "dependencies": {
+    "@eslint/js": "^10.0.1",
+    "@next/eslint-plugin-next": "^16.2.10",
+    "eslint-config-prettier": "^10.1.8",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "typescript-eslint": "^8.62.1"
+  },
+  "peerDependencies": {
+    "eslint": ">=9.17.0"
+  }
+}

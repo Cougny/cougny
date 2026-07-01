@@ -1,0 +1,9 @@
+{
+  "extends": "@cougny/config-typescript/node.json",
+  "compilerOptions": {
+    "outDir": "dist",
+    "rootDir": "src"
+  },
+  "include": ["src/**/*.ts"],
+  "exclude": ["dist", "node_modules"]
+}

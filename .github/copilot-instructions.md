@@ -26,6 +26,17 @@ Guidance for GitHub Copilot and any AI assistant working in this repository.
    user explicitly asks you to. Stage and prepare changes if helpful, but the
    user decides when to commit.
 
+5. **Never hardcode English.** Do not embed user-facing English strings
+   directly in code. Route all user-facing text through the project's
+   internationalization (i18n) layer so it can be translated and localized.
+   Keep locale-specific formatting (dates, numbers, currency) localizable too.
+
+6. **Use the latest major release of everything.** Keep all dependencies — npm
+   packages, Docker base images, tooling, and language runtimes — on their
+   latest stable major version. When adding or updating a dependency, choose the
+   newest stable release and do the migration it requires rather than pinning to
+   an older major. Avoid pre-release/beta versions.
+
 ## When in doubt
 
 Ask. Do not assume permission to commit, publish, or share anything.

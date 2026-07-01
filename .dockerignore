@@ -1,0 +1,25 @@
+# Dependencies and build output are reinstalled/rebuilt inside the image.
+**/node_modules
+**/dist
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+.pnpm-store
+
+# VCS / CI / editor
+.git
+.github
+.husky
+.vscode
+.idea
+
+# Env and secrets (pass real values at runtime)
+.env
+.env.*
+!.env.example
+
+# Local infra / docs / misc
+infra/**/data
+coverage
+*.log
+.DS_Store

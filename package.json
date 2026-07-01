@@ -1,0 +1,73 @@
+{
+  "name": "cougny",
+  "version": "0.0.0",
+  "private": true,
+  "description": "Cougny — random 1:1 video calling platform.",
+  "packageManager": "pnpm@10.31.0",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "dev": "turbo run dev",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "clean": "turbo run clean && rm -rf node_modules",
+    "format": "prettier --write \"**/*.{ts,tsx,js,json,md}\"",
+    "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
+    "db:generate": "pnpm --filter @cougny/db generate",
+    "db:migrate": "pnpm --filter @cougny/db migrate",
+    "db:studio": "pnpm --filter @cougny/db studio",
+    "knip": "knip",
+    "infra:up": "docker compose -f infra/docker-compose.yml up -d",
+    "infra:down": "docker compose -f infra/docker-compose.yml down",
+    "docker:build": "docker compose build",
+    "docker:up": "docker compose up -d --build",
+    "docker:down": "docker compose down",
+    "docker:logs": "docker compose logs -f",
+    "docker:db-setup": "docker compose run --rm db-setup",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "@cougny/config-eslint": "workspace:*",
+    "eslint": "^10.6.0",
+    "husky": "^9.1.7",
+    "knip": "^6.23.0",
+    "lint-staged": "^17.0.8",
+    "prettier": "^3.9.4",
+    "turbo": "^2.10.2",
+    "typescript": "^6.0.3"
+  },
+  "lint-staged": {
+    "apps/api/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "apps/signaling/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "packages/*/src/**/*.ts": [
+      "eslint --fix",
+      "prettier --write"
+    ],
+    "apps/web/**/*.{ts,tsx}": [
+      "prettier --write"
+    ],
+    "**/*.{js,cjs,mjs,jsx,json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
+  },
+  "pnpm": {
+    "onlyBuiltDependencies": [
+      "@parcel/watcher",
+      "@prisma/client",
+      "@prisma/engines",
+      "@swc/core",
+      "esbuild",
+      "prisma",
+      "sharp"
+    ]
+  }
+}

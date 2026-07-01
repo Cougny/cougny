@@ -1,0 +1,41 @@
+{
+  "app": {
+    "name": "Cougny",
+    "tagline": "Meet someone new, face to face."
+  },
+  "home": {
+    "title": "Talk to a stranger",
+    "subtitle": "One click and you're matched with a random person for a live video chat.",
+    "start": "Start a call",
+    "guidelines": "Be kind. No nudity, harassment, or anyone under 18. You can skip or report anytime.",
+    "cameraNote": "We'll ask for camera and microphone access to connect you."
+  },
+  "call": {
+    "connecting": "Connecting…",
+    "searching": "Looking for someone to talk to…",
+    "connected": "You're connected",
+    "peerLeft": "Your partner left.",
+    "reconnecting": "Reconnecting…",
+    "you": "You",
+    "stranger": "Stranger",
+    "next": "Next",
+    "stop": "Stop",
+    "report": "Report",
+    "toggleCamera": "Camera",
+    "toggleMic": "Microphone",
+    "permissionDenied": "Camera and microphone access is required to start a call.",
+    "permissionRetry": "Grant access and try again",
+    "errorGeneric": "Something went wrong. Please try again."
+  },
+  "report": {
+    "title": "Report this person",
+    "reasonNudity": "Nudity or sexual content",
+    "reasonHarassment": "Harassment or hate",
+    "reasonMinor": "Under 18",
+    "reasonSpam": "Spam or advertising",
+    "reasonOther": "Something else",
+    "submit": "Submit report",
+    "cancel": "Cancel",
+    "thanks": "Thanks — our team will review this."
+  }
+}
