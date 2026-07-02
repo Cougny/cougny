@@ -6,7 +6,7 @@ import { defineConfig } from 'prisma/config';
  * migration/introspection commands) instead of in `schema.prisma`; the runtime
  * client connects through a driver adapter — see `src/index.ts`.
  *
- * `DATABASE_URL` is loaded from the repo-root `.env` via `dotenv/config`.
+ * `DATABASE_URL` is loaded from this package's `.env` via `dotenv/config`.
  */
 export default defineConfig({
   schema: 'prisma/schema.prisma',

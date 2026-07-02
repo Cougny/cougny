@@ -51,7 +51,9 @@ Prerequisites: Node 24 (`.nvmrc`), pnpm 10, Docker.
 
 ```bash
 pnpm install
-cp .env.example .env
+
+# Copy each app/package's env template to a local .env
+for d in apps/api apps/signaling apps/web packages/db; do cp "$d/.env.example" "$d/.env"; done
 
 # Start Postgres, Redis, and coturn
 pnpm infra:up

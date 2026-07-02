@@ -12,7 +12,9 @@
 
 ```bash
 pnpm install
-cp .env.example .env
+
+# Copy each app/package's env template to a local .env
+for d in apps/api apps/signaling apps/web packages/db; do cp "$d/.env.example" "$d/.env"; done
 ```
 
 `pnpm install` also sets up the Husky git hooks via the `prepare` script.
@@ -49,8 +51,10 @@ network) to match yourself and start a call.
 
 ## Environment variables
 
-All configuration is documented inline in [`.env.example`](../.env.example).
-Highlights:
+Each app and the `db` package has its own `.env.example` documenting its
+variables inline ([api](../apps/api/.env.example),
+[signaling](../apps/signaling/.env.example), [web](../apps/web/.env.example),
+[db](../packages/db/.env.example)). Highlights:
 
 | Variable                    | Used by        | Purpose                             |
 | --------------------------- | -------------- | ----------------------------------- |

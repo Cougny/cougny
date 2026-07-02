@@ -1,7 +1,7 @@
 # Full containerized stack: builds and runs all three apps on top of the shared
 # infrastructure (postgres, redis, coturn) defined in infra/docker-compose.yml.
 #
-#   cp .env.example .env
+#   cp apps/api/.env.example apps/api/.env         # and likewise per app
 #   docker compose up -d --build          # start everything
 #   docker compose run --rm db-setup      # create tables (first run)
 #
@@ -16,7 +16,7 @@ services:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
-    env_file: .env
+    env_file: apps/api/.env
     environment:
       NODE_ENV: production
       # Reach infra by compose service name (overrides the localhost .env values).
@@ -33,7 +33,7 @@ services:
     build:
       context: .
       dockerfile: apps/signaling/Dockerfile
-    env_file: .env
+    env_file: apps/signaling/.env
     environment:
       NODE_ENV: production
     ports:
@@ -63,7 +63,7 @@ services:
       target: tools
     profiles: ['tools']
     command: ['pnpm', 'prisma', 'db', 'push']
-    env_file: .env
+    env_file: packages/db/.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:-cougny}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
     depends_on:

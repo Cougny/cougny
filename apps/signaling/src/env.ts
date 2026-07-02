@@ -1,7 +1,7 @@
 import { config } from 'dotenv';
 import { z } from 'zod';
 
-// Load the repo-root .env when running locally. In production, real env vars win.
+// Load this service's local .env when running locally. In production, real env vars win.
 config();
 
 const EnvSchema = z.object({

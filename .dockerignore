@@ -13,10 +13,11 @@
 .vscode
 .idea
 
-# Env and secrets (pass real values at runtime)
-.env
-.env.*
-!.env.example
+# Env and secrets (pass real values at runtime). Globbed so per-app files
+# (apps/*/.env, packages/*/.env) are excluded too, while examples are kept.
+**/.env
+**/.env.*
+!**/.env.example
 
 # Local infra / docs / misc
 infra/**/data
