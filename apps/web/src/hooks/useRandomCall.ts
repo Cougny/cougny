@@ -1,12 +1,19 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SignalPayload } from '@cougny/protocol';
+import type { MatchPreferences, SignalPayload } from '@cougny/protocol';
 import { ensureSession, fetchIceServers } from '@/lib/api';
 import { SignalingClient } from '@/lib/signaling';
 
 export type CallStatus =
   'idle' | 'requesting-media' | 'searching' | 'connecting' | 'connected' | 'peer-left' | 'error';
+
+export interface ChatMessage {
+  id: string;
+  from: 'me' | 'peer';
+  text: string;
+  at: number;
+}
 
 export interface UseRandomCall {
   status: CallStatus;
@@ -17,6 +24,12 @@ export interface UseRandomCall {
   micEnabled: boolean;
   roomId: string | null;
   peerId: string | null;
+  chatMessages: ChatMessage[];
+  chatReady: boolean;
+  peerTyping: boolean;
+  sendChatMessage: (text: string) => void;
+  sendTyping: () => void;
+  updatePreferences: (preferences: MatchPreferences) => void;
   start: () => void;
   next: () => void;
   stop: () => void;
@@ -28,6 +41,28 @@ const MEDIA_CONSTRAINTS: MediaStreamConstraints = {
   video: { width: { ideal: 1280 }, height: { ideal: 720 } },
   audio: { echoCancellation: true, noiseSuppression: true },
 };
+
+// Both peers open the channel with the same negotiated id, so neither side
+// has to wait for an `ondatachannel` event and no extra offer is needed.
+const CHAT_CHANNEL_ID = 0;
+const CHAT_MESSAGE_MAX_LENGTH = 2000;
+const TYPING_SEND_INTERVAL_MS = 1500;
+const TYPING_EXPIRY_MS = 3000;
+
+/** Frames exchanged over the chat data channel. */
+type ChatFrame = { t: 'text'; text: string } | { t: 'typing' };
+
+function parseChatFrame(data: unknown): ChatFrame | null {
+  if (typeof data !== 'string') return null;
+  try {
+    const frame = JSON.parse(data) as ChatFrame;
+    if (frame.t === 'typing') return frame;
+    if (frame.t === 'text' && typeof frame.text === 'string') return frame;
+    return null;
+  } catch {
+    return null;
+  }
+}
 
 /**
  * Orchestrates a random 1:1 video call: media capture, signaling, and the
@@ -44,9 +79,16 @@ export function useRandomCall(): UseRandomCall {
   const [micEnabled, setMicEnabled] = useState(true);
   const [roomId, setRoomId] = useState<string | null>(null);
   const [peerId, setPeerId] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [chatReady, setChatReady] = useState(false);
+  const [peerTyping, setPeerTyping] = useState(false);
 
   const signalingRef = useRef<SignalingClient | null>(null);
   const pcRef = useRef<RTCPeerConnection | null>(null);
+  const chatChannelRef = useRef<RTCDataChannel | null>(null);
+  const peerTypingTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const lastTypingSentAtRef = useRef(0);
+  const preferencesRef = useRef<MatchPreferences>({});
   const localStreamRef = useRef<MediaStream | null>(null);
   const iceServersRef = useRef<RTCIceServer[]>([]);
 
@@ -56,6 +98,14 @@ export function useRandomCall(): UseRandomCall {
   const ignoreOfferRef = useRef(false);
 
   const teardownPeer = useCallback(() => {
+    chatChannelRef.current?.close();
+    chatChannelRef.current = null;
+    if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
+    peerTypingTimerRef.current = null;
+    lastTypingSentAtRef.current = 0;
+    setChatMessages([]);
+    setChatReady(false);
+    setPeerTyping(false);
     pcRef.current?.close();
     pcRef.current = null;
     setRemoteStream(null);
@@ -85,6 +135,34 @@ export function useRandomCall(): UseRandomCall {
     pcRef.current = pc;
 
     for (const track of localMedia.getTracks()) pc.addTrack(track, localMedia);
+
+    const chatChannel = pc.createDataChannel('chat', {
+      negotiated: true,
+      id: CHAT_CHANNEL_ID,
+    });
+    chatChannelRef.current = chatChannel;
+    chatChannel.onopen = () => setChatReady(true);
+    chatChannel.onclose = () => setChatReady(false);
+    chatChannel.onmessage = ({ data }) => {
+      const frame = parseChatFrame(data);
+      if (!frame) return;
+
+      if (frame.t === 'typing') {
+        setPeerTyping(true);
+        if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
+        peerTypingTimerRef.current = setTimeout(() => setPeerTyping(false), TYPING_EXPIRY_MS);
+        return;
+      }
+
+      const text = frame.text.slice(0, CHAT_MESSAGE_MAX_LENGTH).trim();
+      if (!text) return;
+      if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
+      setPeerTyping(false);
+      setChatMessages((messages) => [
+        ...messages,
+        { id: crypto.randomUUID(), from: 'peer', text, at: Date.now() },
+      ]);
+    };
 
     pc.onnegotiationneeded = async () => {
       try {
@@ -221,7 +299,7 @@ export function useRandomCall(): UseRandomCall {
 
         await signaling.connect(session.token);
         setStatus('searching');
-        signaling.send({ t: 'queue.join', payload: {} });
+        signaling.send({ t: 'queue.join', payload: preferencesRef.current });
       } catch (err) {
         const denied = err instanceof DOMException && err.name === 'NotAllowedError';
         setError(denied ? 'permissionDenied' : 'errorGeneric');
@@ -239,8 +317,33 @@ export function useRandomCall(): UseRandomCall {
     teardownPeer();
     signaling.send({ t: 'peer.leave' });
     setStatus('searching');
-    signaling.send({ t: 'queue.join', payload: {} });
+    signaling.send({ t: 'queue.join', payload: preferencesRef.current });
   }, [start, teardownPeer]);
+
+  const updatePreferences = useCallback((preferences: MatchPreferences) => {
+    preferencesRef.current = preferences;
+  }, []);
+
+  const sendChatMessage = useCallback((text: string) => {
+    const channel = chatChannelRef.current;
+    const trimmed = text.slice(0, CHAT_MESSAGE_MAX_LENGTH).trim();
+    if (!trimmed || channel?.readyState !== 'open') return;
+    channel.send(JSON.stringify({ t: 'text', text: trimmed } satisfies ChatFrame));
+    lastTypingSentAtRef.current = 0;
+    setChatMessages((messages) => [
+      ...messages,
+      { id: crypto.randomUUID(), from: 'me', text: trimmed, at: Date.now() },
+    ]);
+  }, []);
+
+  const sendTyping = useCallback(() => {
+    const channel = chatChannelRef.current;
+    if (channel?.readyState !== 'open') return;
+    const now = Date.now();
+    if (now - lastTypingSentAtRef.current < TYPING_SEND_INTERVAL_MS) return;
+    lastTypingSentAtRef.current = now;
+    channel.send(JSON.stringify({ t: 'typing' } satisfies ChatFrame));
+  }, []);
 
   const toggleCamera = useCallback(() => {
     const track = localStreamRef.current?.getVideoTracks()[0];
@@ -268,6 +371,12 @@ export function useRandomCall(): UseRandomCall {
     micEnabled,
     roomId,
     peerId,
+    chatMessages,
+    chatReady,
+    peerTyping,
+    sendChatMessage,
+    sendTyping,
+    updatePreferences,
     start,
     next,
     stop,

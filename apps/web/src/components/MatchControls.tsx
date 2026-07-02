@@ -1,0 +1,271 @@
+'use client';
+
+import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useLocale, useTranslations } from 'next-intl';
+import type { GenderPreference, MatchPreferences } from '@cougny/protocol';
+import type { CallStatus } from '@/hooks/useRandomCall';
+import { NextIcon, StopIcon } from '@/components/icons';
+
+const PREFS_STORAGE_KEY = 'cougny.matchPreferences';
+const PREFS_CHANGE_EVENT = 'cougny:prefs-change';
+
+const COUNTRY_CODES = [
+  'AE', 'AR', 'AU', 'BD', 'BR', 'CA', 'CN', 'DE', 'EG', 'ES',
+  'FR', 'GB', 'ID', 'IN', 'IT', 'JP', 'KR', 'MX', 'NG', 'NL',
+  'PH', 'PK', 'PL', 'PT', 'RU', 'SA', 'TH', 'TR', 'UA', 'US',
+  'VN', 'ZA',
+] as const;
+
+interface StoredPrefs {
+  country: string;
+  gender: GenderPreference;
+}
+
+const DEFAULT_PREFS: StoredPrefs = { country: 'any', gender: 'any' };
+
+function subscribeToPrefs(onChange: () => void): () => void {
+  window.addEventListener(PREFS_CHANGE_EVENT, onChange);
+  window.addEventListener('storage', onChange);
+  return () => {
+    window.removeEventListener(PREFS_CHANGE_EVENT, onChange);
+    window.removeEventListener('storage', onChange);
+  };
+}
+
+function parsePrefs(raw: string): StoredPrefs {
+  try {
+    const parsed = JSON.parse(raw) as Partial<StoredPrefs>;
+    return {
+      country: typeof parsed.country === 'string' ? parsed.country : DEFAULT_PREFS.country,
+      gender:
+        parsed.gender === 'male' || parsed.gender === 'female' ? parsed.gender : DEFAULT_PREFS.gender,
+    };
+  } catch {
+    return DEFAULT_PREFS;
+  }
+}
+
+interface MatchControlsProps {
+  status: CallStatus;
+  onStart: () => void;
+  onSkip: () => void;
+  onStop: () => void;
+  onPreferencesChange: (preferences: MatchPreferences) => void;
+}
+
+/** Four equal control blocks: start/stop, skip, country filter, gender filter. */
+export function MatchControls({
+  status,
+  onStart,
+  onSkip,
+  onStop,
+  onPreferencesChange,
+}: MatchControlsProps): React.ReactElement {
+  const t = useTranslations('call');
+  const locale = useLocale();
+
+  const rawPrefs = useSyncExternalStore(
+    subscribeToPrefs,
+    () => window.localStorage.getItem(PREFS_STORAGE_KEY) ?? '{}',
+    () => '{}',
+  );
+  const prefs = useMemo(() => parsePrefs(rawPrefs), [rawPrefs]);
+
+  // Countries sorted by their name in the user's language.
+  const countries = useMemo(() => {
+    const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
+    return COUNTRY_CODES.map((code) => ({ code, name: displayNames.of(code) ?? code })).sort(
+      (a, b) => a.name.localeCompare(b.name, locale),
+    );
+  }, [locale]);
+
+  // Keep the call hook's queue.join payload in sync with the stored filters.
+  useEffect(() => {
+    onPreferencesChange({
+      country: prefs.country === 'any' ? undefined : prefs.country,
+      gender: prefs.gender === 'any' ? undefined : prefs.gender,
+    });
+  }, [prefs, onPreferencesChange]);
+
+  const setPrefs = (patch: Partial<StoredPrefs>): void => {
+    window.localStorage.setItem(PREFS_STORAGE_KEY, JSON.stringify({ ...prefs, ...patch }));
+    window.dispatchEvent(new Event(PREFS_CHANGE_EVENT));
+  };
+
+  const [openPicker, setOpenPicker] = useState<'country' | 'gender' | null>(null);
+
+  const idle = status === 'idle' || status === 'error';
+
+  return (
+    <div className="grid h-full grid-cols-4 gap-2 p-3">
+      {idle ? (
+        <button
+          onClick={onStart}
+          className="flex flex-col items-center justify-center gap-1 rounded-xl bg-brand text-sm font-bold uppercase tracking-wider text-brand-fg shadow-lg shadow-brand/25 transition hover:scale-[1.02] hover:opacity-90 active:scale-[0.98]"
+        >
+          {t('start')}
+        </button>
+      ) : (
+        <button
+          onClick={onStop}
+          className="flex flex-col items-center justify-center gap-1 rounded-xl bg-red-600 text-sm font-bold uppercase tracking-wider text-white transition hover:scale-[1.02] hover:bg-red-500 active:scale-[0.98]"
+        >
+          <StopIcon className="h-5 w-5" />
+          {t('stop')}
+        </button>
+      )}
+
+      <button
+        onClick={onSkip}
+        disabled={idle}
+        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-brand/60 bg-brand/15 text-sm font-bold uppercase tracking-wider text-brand-fg transition hover:scale-[1.02] hover:bg-brand/30 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-40"
+      >
+        <NextIcon className="h-5 w-5" />
+        {t('skip')}
+      </button>
+
+      <PickerBlock
+        label={t('countryLabel')}
+        value={prefs.country}
+        open={openPicker === 'country'}
+        onToggle={() => setOpenPicker(openPicker === 'country' ? null : 'country')}
+        onSelect={(country) => {
+          setPrefs({ country });
+          setOpenPicker(null);
+        }}
+        options={[
+          { value: 'any', label: t('anyOption') },
+          ...countries.map(({ code, name }) => ({ value: code, label: name })),
+        ]}
+      />
+
+      <PickerBlock
+        label={t('genderLabel')}
+        value={prefs.gender}
+        open={openPicker === 'gender'}
+        onToggle={() => setOpenPicker(openPicker === 'gender' ? null : 'gender')}
+        onSelect={(gender) => {
+          setPrefs({ gender: gender as GenderPreference });
+          setOpenPicker(null);
+        }}
+        options={[
+          { value: 'any', label: t('anyOption') },
+          { value: 'male', label: t('genderMale') },
+          { value: 'female', label: t('genderFemale') },
+        ]}
+      />
+    </div>
+  );
+}
+
+interface PickerOption {
+  value: string;
+  label: string;
+}
+
+function PickerBlock({
+  label,
+  value,
+  options,
+  open,
+  onToggle,
+  onSelect,
+}: {
+  label: string;
+  value: string;
+  options: PickerOption[];
+  open: boolean;
+  onToggle: () => void;
+  onSelect: (value: string) => void;
+}): React.ReactElement {
+  const selected = options.find((option) => option.value === value) ?? options[0];
+
+  // Close with Escape while the popup is open.
+  useEffect(() => {
+    if (!open) return;
+    const onKeyDown = (event: KeyboardEvent): void => {
+      if (event.key === 'Escape') onToggle();
+    };
+    window.addEventListener('keydown', onKeyDown);
+    return () => window.removeEventListener('keydown', onKeyDown);
+  }, [open, onToggle]);
+
+  return (
+    <div className="relative min-w-0">
+      <button
+        onClick={onToggle}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+        className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl border bg-neutral-900 px-3 transition hover:border-neutral-600 ${
+          open ? 'border-brand' : 'border-neutral-800'
+        }`}
+      >
+        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-500">
+          {label}
+        </span>
+        <span className="flex max-w-full items-center gap-1 text-sm font-semibold text-neutral-100">
+          <span className="truncate">{selected?.label}</span>
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            aria-hidden
+            className={`h-3.5 w-3.5 shrink-0 text-neutral-500 transition-transform ${open ? 'rotate-180' : ''}`}
+          >
+            <polyline points="6 9 12 15 18 9" />
+          </svg>
+        </span>
+      </button>
+
+      {open && (
+        <>
+          {/* Click-away backdrop. */}
+          <div className="fixed inset-0 z-40" onClick={onToggle} />
+
+          <ul
+            role="listbox"
+            aria-label={label}
+            className="absolute bottom-full left-1/2 z-50 mb-2 max-h-72 w-56 -translate-x-1/2 overflow-y-auto rounded-xl border border-neutral-700 bg-neutral-900 p-1 shadow-2xl"
+          >
+            {options.map((option) => {
+              const isSelected = option.value === value;
+              return (
+                <li key={option.value}>
+                  <button
+                    role="option"
+                    aria-selected={isSelected}
+                    onClick={() => onSelect(option.value)}
+                    className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
+                      isSelected
+                        ? 'bg-brand/20 font-semibold text-brand-fg'
+                        : 'text-neutral-200 hover:bg-neutral-800'
+                    }`}
+                  >
+                    <span className="truncate">{option.label}</span>
+                    {isSelected && (
+                      <svg
+                        viewBox="0 0 24 24"
+                        fill="none"
+                        stroke="currentColor"
+                        strokeWidth={2.5}
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        aria-hidden
+                        className="h-4 w-4 shrink-0 text-brand"
+                      >
+                        <polyline points="20 6 9 17 4 12" />
+                      </svg>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}

@@ -32,10 +32,17 @@ export const IceSignalSchema = z.object({
 export const SignalPayloadSchema = z.discriminatedUnion('kind', [SdpSignalSchema, IceSignalSchema]);
 export type SignalPayload = z.infer<typeof SignalPayloadSchema>;
 
+/** Gender filter for matchmaking. */
+export const GenderPreferenceSchema = z.enum(['any', 'male', 'female']);
+export type GenderPreference = z.infer<typeof GenderPreferenceSchema>;
+
 /** Optional matchmaking preferences supplied by the client. */
 export const MatchPreferencesSchema = z.object({
   locale: z.string().min(2).max(10).optional(),
   interests: z.array(z.string().min(1).max(32)).max(10).optional(),
+  /** ISO 3166-1 alpha-2 country filter; omitted means anywhere. */
+  country: z.string().length(2).optional(),
+  gender: GenderPreferenceSchema.optional(),
 });
 export type MatchPreferences = z.infer<typeof MatchPreferencesSchema>;
 
