@@ -81,11 +81,21 @@ Open http://localhost:3000.
 | `pnpm infra:up/down` | Start / stop local infrastructure |
 | `pnpm db:studio`     | Open Prisma Studio                |
 
+## Deploying
+
+Production runs as a single-host Docker stack defined in
+[`docker-compose.prod.yml`](./docker-compose.prod.yml): Caddy (automatic
+Let's Encrypt TLS) in front of the three apps, plus Postgres, Redis, and
+coturn, with every secret injected by [Doppler](https://www.doppler.com) —
+no `.env` files in production. The full droplet walkthrough is in
+[docs/deployment.md](./docs/deployment.md).
+
 ## Conventions
 
 - **Contracts live in `@cougny/protocol`.** The web client and the signaling
   server parse the same Zod schemas — change the wire format in one place.
 - **No hardcoded user-facing English.** All copy lives in
   `apps/web/messages/*.json` and is rendered via `next-intl`.
-- See [`CLAUDE.md`](./CLAUDE.md) / [`AGENTS.md`](./AGENTS.md) for contributor
+- See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow,
+  and [`CLAUDE.md`](./CLAUDE.md) / [`AGENTS.md`](./AGENTS.md) for AI-assistant
   guidance.

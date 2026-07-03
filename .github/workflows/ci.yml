@@ -12,6 +12,22 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:18-alpine
+        env:
+          POSTGRES_USER: cougny
+          POSTGRES_PASSWORD: cougny
+          POSTGRES_DB: cougny
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U cougny"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v7
 
@@ -27,6 +43,21 @@ jobs:
 
       - name: Generate Prisma client
         run: pnpm db:generate
+
+      # Schema changes must ship as committed migrations (never `db push`):
+      # prove they apply cleanly to a fresh database…
+      - name: Apply migrations
+        run: pnpm --filter @cougny/db migrate:deploy
+        env:
+          DATABASE_URL: postgresql://cougny:cougny@localhost:5432/cougny?schema=public
+
+      # …and that schema.prisma has no drift the migrations don't capture.
+      - name: Check for schema drift
+        run: >-
+          pnpm --filter @cougny/db exec prisma migrate diff
+          --from-config-datasource --to-schema prisma/schema.prisma --exit-code
+        env:
+          DATABASE_URL: postgresql://cougny:cougny@localhost:5432/cougny?schema=public
 
       - name: Lint
         run: pnpm lint

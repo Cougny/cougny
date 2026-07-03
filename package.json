@@ -26,7 +26,7 @@
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:db-setup": "docker compose run --rm db-setup",
+    "docker:db-migrate": "docker compose run --rm db-migrate",
     "prepare": "husky"
   },
   "devDependencies": {

@@ -1,0 +1,30 @@
+# Production edge config for Cougny (mounted by the `caddy` service in
+# docker-compose.prod.yml). Caddy provisions and renews Let's Encrypt
+# certificates automatically for every site block below.
+#
+# Domains are injected as environment variables by the compose service (which
+# in turn gets them from Doppler) — nothing here is environment-specific.
+
+{
+	email {$ACME_EMAIL}
+}
+
+# Next.js web client.
+{$WEB_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy web:3000
+}
+
+# Fastify HTTP API.
+{$API_DOMAIN} {
+	encode zstd gzip
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy api:4000
+}
+
+# WebSocket signaling (Caddy proxies the Upgrade handshake transparently).
+{$SIGNALING_DOMAIN} {
+	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	reverse_proxy signaling:4001
+}
