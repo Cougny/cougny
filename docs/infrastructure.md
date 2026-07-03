@@ -68,7 +68,12 @@ The API mints matching HMAC credentials — see
 
 ## Deploying the apps
 
-Each app builds to a standalone artifact:
+The supported production path is the single-host Docker stack in
+[`docker-compose.prod.yml`](../docker-compose.prod.yml) — Caddy TLS edge,
+Doppler-injected secrets, production coturn — with the full droplet
+walkthrough in [deployment.md](./deployment.md).
+
+For other targets, each app builds to a standalone artifact:
 
 - **api / signaling** — `pnpm --filter @cougny/<app> build` → `node dist/index.js`.
   Both expose `GET /healthz` for load-balancer probes.

@@ -2,6 +2,7 @@
   "name": "cougny",
   "version": "0.0.0",
   "private": true,
+  "license": "AGPL-3.0-only",
   "description": "Cougny — random 1:1 video calling platform.",
   "packageManager": "pnpm@10.31.0",
   "engines": {
@@ -26,7 +27,7 @@
     "docker:up": "docker compose up -d --build",
     "docker:down": "docker compose down",
     "docker:logs": "docker compose logs -f",
-    "docker:db-setup": "docker compose run --rm db-setup",
+    "docker:db-migrate": "docker compose run --rm db-migrate",
     "prepare": "husky"
   },
   "devDependencies": {

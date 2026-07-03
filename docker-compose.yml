@@ -3,7 +3,7 @@
 #
 #   cp apps/api/.env.example apps/api/.env         # and likewise per app
 #   docker compose up -d --build          # start everything
-#   docker compose run --rm db-setup      # create tables (first run)
+#   docker compose run --rm db-migrate    # apply migrations (first run)
 #
 # For infra-only local dev (apps via `pnpm dev`), use `pnpm infra:up` instead.
 name: cougny
@@ -60,14 +60,14 @@ services:
       - signaling
     restart: unless-stopped
 
-  # One-shot helper: create/sync the database schema. Not started by `up`.
-  db-setup:
+  # One-shot helper: apply committed Prisma migrations. Not started by `up`.
+  db-migrate:
     build:
       context: .
       dockerfile: apps/api/Dockerfile
       target: tools
     profiles: ['tools']
-    command: ['pnpm', 'prisma', 'db', 'push']
+    command: ['pnpm', 'prisma', 'migrate', 'deploy']
     env_file: packages/db/.env
     environment:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:-cougny}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public

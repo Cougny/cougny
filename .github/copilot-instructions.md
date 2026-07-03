@@ -37,6 +37,12 @@ Guidance for GitHub Copilot and any AI assistant working in this repository.
    newest stable release and do the migration it requires rather than pinning to
    an older major. Avoid pre-release/beta versions.
 
+7. **Never `prisma db push` — schema changes go through migrations.** Create
+   migrations in development with `pnpm db:migrate` (`prisma migrate dev`) and
+   apply them everywhere else — CI, Docker, production — with
+   `prisma migrate deploy` only. Never mutate a database schema outside a
+   committed migration in `packages/db/prisma/migrations/`.
+
 ## When in doubt
 
 Ask. Do not assume permission to commit, publish, or share anything.

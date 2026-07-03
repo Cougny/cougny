@@ -1,0 +1,200 @@
+# Production stack for a single host (e.g. a DigitalOcean droplet).
+#
+# All secrets and config are injected by Doppler — no .env files exist in
+# production. Run every compose command through `doppler run` so the
+# `${VAR}` interpolations below resolve from the Doppler config:
+#
+#   doppler run -- docker compose -f docker-compose.prod.yml up -d --build
+#   doppler run -- docker compose -f docker-compose.prod.yml run --rm db-migrate
+#
+# Topology: Caddy terminates TLS (automatic Let's Encrypt) and reverse-proxies
+# the three apps; postgres and redis are reachable only on the internal
+# network; coturn runs on the host network so ICE sees real addresses.
+#
+# Full droplet walkthrough (DNS, firewall, Doppler setup): docs/deployment.md
+name: cougny-prod
+
+x-logging: &default-logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '3'
+
+services:
+  # ---- edge: TLS termination + reverse proxy ---------------------------------
+  caddy:
+    image: caddy:2-alpine
+    restart: always
+    logging: *default-logging
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp' # HTTP/3
+    environment:
+      WEB_DOMAIN: ${WEB_DOMAIN:?e.g. www.cougny.com}
+      API_DOMAIN: ${API_DOMAIN:?e.g. api.cougny.com}
+      SIGNALING_DOMAIN: ${SIGNALING_DOMAIN:?e.g. signaling.cougny.com}
+      ACME_EMAIL: ${ACME_EMAIL:?contact email for Let's Encrypt}
+    volumes:
+      - ./infra/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+      api:
+        condition: service_healthy
+      signaling:
+        condition: service_healthy
+
+  # ---- apps ------------------------------------------------------------------
+  web:
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        # Browser-reachable URLs, baked into the client bundle at build time.
+        NEXT_PUBLIC_API_URL: ${NEXT_PUBLIC_API_URL:?e.g. https://api.cougny.com}
+        NEXT_PUBLIC_SIGNALING_URL: ${NEXT_PUBLIC_SIGNALING_URL:?e.g. wss://signaling.cougny.com}
+    restart: always
+    logging: *default-logging
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://127.0.0.1:3000/']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 20s
+
+  api:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+    restart: always
+    logging: *default-logging
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+      REDIS_URL: redis://redis:6379
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?generate with `openssl rand -hex 32`}
+      SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://www.cougny.com}
+      # Public ICE endpoints handed to browsers; must resolve to this host.
+      STUN_URL: ${STUN_URL:?e.g. stun:turn.cougny.com:3478}
+      TURN_URL: ${TURN_URL:?e.g. turn:turn.cougny.com:3478}
+      TURN_STATIC_AUTH_SECRET: ${TURN_STATIC_AUTH_SECRET:?generate with `openssl rand -hex 32`}
+      TURN_CREDENTIAL_TTL: ${TURN_CREDENTIAL_TTL:-86400}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://127.0.0.1:4000/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+
+  signaling:
+    build:
+      context: .
+      dockerfile: apps/signaling/Dockerfile
+    restart: always
+    logging: *default-logging
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?generate with `openssl rand -hex 32`}
+      SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://www.cougny.com}
+      SIGNALING_MAX_QUEUE: ${SIGNALING_MAX_QUEUE:-10000}
+    healthcheck:
+      test: ['CMD', 'wget', '-qO', '/dev/null', 'http://127.0.0.1:4001/healthz']
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ---- data stores (internal network only — no published ports) ---------------
+  postgres:
+    image: postgres:18-alpine
+    restart: always
+    logging: *default-logging
+    shm_size: 128mb
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-cougny}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}
+      POSTGRES_DB: ${POSTGRES_DB:-cougny}
+    volumes:
+      # Postgres 18+ images store data under a major-version subdirectory, so
+      # the volume mounts at /var/lib/postgresql (not the legacy .../data path).
+      - pgdata:/var/lib/postgresql
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-cougny}']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis:
+    image: redis:8-alpine
+    restart: always
+    logging: *default-logging
+    # Cache/coordination layer, not a system of record — persistence off.
+    command: ['redis-server', '--save', '', '--appendonly', 'no']
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  # ---- TURN/STUN ---------------------------------------------------------------
+  # Host networking: TURN relays a range of UDP ports, and Docker's per-port
+  # proxying is both slow at that scale and rewrites addresses in ways that
+  # break ICE. The relay range below must match the host firewall rules.
+  coturn:
+    image: coturn/coturn:4.6-alpine
+    network_mode: host
+    restart: always
+    logging: *default-logging
+    command:
+      - -n # no config file; flags only
+      - --log-file=stdout
+      - --listening-port=3478
+      - --fingerprint
+      - --use-auth-secret
+      - --static-auth-secret=${TURN_STATIC_AUTH_SECRET:?generate with `openssl rand -hex 32`}
+      - --realm=${TURN_REALM:?e.g. cougny.com}
+      - --min-port=${TURN_MIN_PORT:-49160}
+      - --max-port=${TURN_MAX_PORT:-49400}
+      # The image entrypoint eval-expands this to the host's public IP.
+      - --external-ip=$$(detect-external-ip)
+      - --no-cli
+      # Plain TURN: relayed media is already DTLS-SRTP encrypted end-to-end and
+      # credentials are ephemeral HMACs. For TURN-over-TLS on 5349 (restrictive
+      # corporate firewalls), see docs/deployment.md#turn-over-tls.
+      - --no-tls
+      - --no-dtls
+
+  # ---- one-shot helper: apply committed Prisma migrations ---------------------
+  # Not started by `up`; run explicitly on first deploy and after schema changes:
+  #   doppler run -- docker compose -f docker-compose.prod.yml run --rm db-migrate
+  db-migrate:
+    build:
+      context: .
+      dockerfile: apps/api/Dockerfile
+      target: tools
+    profiles: ['tools']
+    command: ['pnpm', 'prisma', 'migrate', 'deploy']
+    logging: *default-logging
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
+volumes:
+  pgdata:
+  caddy_data:
+  caddy_config:
