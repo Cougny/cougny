@@ -82,7 +82,7 @@ export default function HomePage(): React.ReactElement {
   };
 
   return (
-    <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[65fr_35fr]">
+    <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
       {/* Video stage: fills remaining space. */}
       <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
         <VideoPanel label={t('you')} muted={!call.micEnabled} mutedLabel={t('micOffBadge')}>
