@@ -90,6 +90,10 @@ pnpm build
 
 ## Reporting security issues
 
-Please do not open public issues for vulnerabilities — see
-[docs/security-and-moderation.md](./docs/security-and-moderation.md) and
-contact the maintainer privately.
+Please do not open public issues for vulnerabilities — use GitHub's private
+vulnerability reporting as described in [SECURITY.md](./SECURITY.md).
+
+## Licensing
+
+Cougny is licensed under the [GNU AGPL-3.0](./LICENSE). By contributing, you
+agree that your contributions are licensed under the same terms.

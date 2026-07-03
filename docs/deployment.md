@@ -117,7 +117,7 @@ and Redis (6379) are **not** published and must not be opened.
 ## 6. First deploy
 
 ```bash
-git clone https://github.com/yourscemal/cougny.git /opt/cougny
+git clone https://github.com/Cougny/cougny.git /opt/cougny
 cd /opt/cougny
 
 # Build images and start the stack (Doppler injects all ${VAR} values)

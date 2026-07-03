@@ -3,6 +3,10 @@
 Random video chat with strangers has a serious safety surface. This documents
 what exists today and what is deliberately still open.
 
+> Found an exploitable vulnerability? Report it privately — see
+> [SECURITY.md](../SECURITY.md). This page covers product safety design, not
+> disclosure.
+
 ## Identity & privacy
 
 - **Anonymous by design.** No accounts, emails, or profiles. A session is a
