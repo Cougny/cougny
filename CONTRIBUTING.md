@@ -93,7 +93,17 @@ pnpm build
 Please do not open public issues for vulnerabilities — use GitHub's private
 vulnerability reporting as described in [SECURITY.md](./SECURITY.md).
 
-## Licensing
+## Licensing and the CLA
 
-Cougny is licensed under the [GNU AGPL-3.0](./LICENSE). By contributing, you
-agree that your contributions are licensed under the same terms.
+Cougny is licensed under the [GNU AGPL-3.0](./LICENSE).
+
+Before your first pull request can be merged, you must sign the
+[Contributor License Agreement](./CLA.md). It's a one-time step: the CLA bot
+comments on your PR, and you sign by replying
+
+> I have read the CLA Document and I hereby sign the CLA
+
+You keep the copyright to your contributions; the CLA grants the project
+owners the rights needed to distribute them and to adjust the project's
+licensing in the future. Whatever happens later, versions already published
+under the AGPL remain available under the AGPL.
