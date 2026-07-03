@@ -72,16 +72,22 @@ export function ReportDialog({
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-neutral-950/80 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="absolute inset-0 bg-neutral-950/60 backdrop-blur-sm dark:bg-neutral-950/80"
+        onClick={onClose}
+      />
 
       <form
         role="dialog"
         aria-modal="true"
         aria-labelledby="report-dialog-title"
         onSubmit={handleSubmit}
-        className="relative w-full max-w-md space-y-4 rounded-2xl border border-neutral-800 bg-neutral-900 p-6 shadow-2xl"
+        className="relative w-full max-w-md space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900"
       >
-        <h2 id="report-dialog-title" className="text-lg font-semibold text-neutral-100">
+        <h2
+          id="report-dialog-title"
+          className="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+        >
           {t('title')}
         </h2>
 
@@ -91,8 +97,8 @@ export function ReportDialog({
               key={value}
               className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5 text-sm transition ${
                 reason === value
-                  ? 'border-brand bg-brand/15 text-neutral-100'
-                  : 'border-neutral-800 text-neutral-300 hover:border-neutral-600'
+                  ? 'border-brand bg-brand/10 text-neutral-900 dark:bg-brand/15 dark:text-neutral-100'
+                  : 'border-neutral-200 text-neutral-600 hover:border-neutral-300 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600'
               }`}
             >
               <input
@@ -115,11 +121,11 @@ export function ReportDialog({
           maxLength={DETAILS_MAX_LENGTH}
           rows={3}
           disabled={submitting}
-          className="w-full resize-none rounded-xl border border-neutral-700 bg-neutral-950 px-4 py-2.5 text-sm text-neutral-100 transition placeholder:text-neutral-500 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40"
+          className="w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:bg-neutral-950"
         />
 
         {failed && (
-          <p role="alert" className="text-sm text-red-400">
+          <p role="alert" className="text-sm text-red-600 dark:text-red-400">
             {t('error')}
           </p>
         )}
@@ -129,7 +135,7 @@ export function ReportDialog({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-full px-5 py-2 text-sm font-semibold text-neutral-300 transition hover:bg-neutral-800 disabled:opacity-40"
+            className="rounded-full px-5 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-40 dark:text-neutral-300 dark:hover:bg-neutral-800"
           >
             {t('cancel')}
           </button>

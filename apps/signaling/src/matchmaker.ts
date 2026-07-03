@@ -8,37 +8,58 @@ export interface WaitingPeer {
   enqueuedAt: number;
 }
 
-export interface Match {
-  a: string;
-  b: string;
-}
+/**
+ * Outcome of an {@link Matchmaker.enqueue} call:
+ * - `matched`  — paired with a waiting peer; neither remains queued.
+ * - `waiting`  — added to (or already in) the pool, awaiting a partner.
+ * - `rejected` — the pool is at capacity; the peer was not queued.
+ */
+export type EnqueueResult =
+  | { status: 'matched'; match: { a: string; b: string } }
+  | { status: 'waiting' }
+  | { status: 'rejected'; reason: 'full' };
+
+/** Default cap on simultaneously-waiting peers; overridable per instance. */
+export const DEFAULT_MAX_WAITING = 10_000;
 
 /**
  * FIFO matchmaker for 1:1 random pairing.
  *
- * The interface (enqueue → optional Match, remove, size) is deliberately narrow
- * and free of any transport concern, so it is trivially unit-testable and can be
+ * The interface (enqueue → result, remove, size) is deliberately narrow and
+ * free of any transport concern, so it is trivially unit-testable and can be
  * swapped for a Redis/ZSET-backed implementation when scaling to multiple
  * signaling instances — the hub does not need to change.
+ *
+ * The waiting pool is bounded by `maxWaiting`: once it is full, new peers that
+ * cannot be paired immediately are rejected rather than accumulating without
+ * limit, so a flood of unmatchable peers cannot exhaust memory.
  */
 export class Matchmaker {
   private readonly waiting: WaitingPeer[] = [];
 
+  constructor(private readonly maxWaiting: number = DEFAULT_MAX_WAITING) {}
+
   /**
    * Add a peer to the pool. If a compatible partner is already waiting, returns
-   * the pair immediately (and neither remains queued); otherwise returns null.
+   * `matched` immediately (and neither remains queued). If the peer is already
+   * waiting, or is newly added, returns `waiting`. If no partner is available
+   * and the pool is at capacity, returns `rejected` without queuing the peer.
    */
-  enqueue(id: string, sessionId: string, preferences: MatchPreferences = {}): Match | null {
-    if (this.waiting.some((p) => p.id === id)) return null;
+  enqueue(id: string, sessionId: string, preferences: MatchPreferences = {}): EnqueueResult {
+    // Re-enqueuing an already-waiting peer is idempotent, not a new admission,
+    // so it never counts against capacity.
+    if (this.waiting.some((p) => p.id === id)) return { status: 'waiting' };
 
     const partnerIndex = this.findPartnerIndex(sessionId, preferences);
     if (partnerIndex !== -1) {
       const [partner] = this.waiting.splice(partnerIndex, 1);
-      return { a: partner!.id, b: id };
+      return { status: 'matched', match: { a: partner!.id, b: id } };
     }
 
+    if (this.waiting.length >= this.maxWaiting) return { status: 'rejected', reason: 'full' };
+
     this.waiting.push({ id, sessionId, preferences, enqueuedAt: Date.now() });
-    return null;
+    return { status: 'waiting' };
   }
 
   /** Remove a peer from the waiting pool (on leave/disconnect). */

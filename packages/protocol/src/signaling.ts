@@ -66,6 +66,7 @@ export const SignalErrorCodeSchema = z.enum([
   'bad_message',
   'not_in_room',
   'rate_limited',
+  'queue_full',
   'unauthorized',
   'server_error',
 ]);

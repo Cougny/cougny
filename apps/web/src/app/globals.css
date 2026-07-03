@@ -1,16 +1,30 @@
 @import 'tailwindcss';
 
 /*
+ * Dark mode is class-based: the inline script in the root layout adds `.dark`
+ * to <html> before paint, and `dark:` utilities key off it instead of the
+ * OS-level `prefers-color-scheme`.
+ */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/*
  * Tailwind v4 is CSS-first: theme tokens live here instead of a JS config, and
  * content is auto-detected. `--color-brand` generates `bg-brand`, `text-brand`,
  * `border-brand`, etc.
  */
 @theme {
-  --color-brand: #6d28d9;
+  --color-brand: #7c3aed;
+  --color-brand-strong: #6d28d9;
+  --color-brand-accent: #c026d3;
   --color-brand-fg: #ffffff;
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
 }
 
 :root {
+  color-scheme: light;
+}
+
+:root.dark {
   color-scheme: dark;
 }
 
@@ -20,5 +34,13 @@ body {
 }
 
 body {
-  @apply bg-neutral-950 text-neutral-100 antialiased;
+  @apply bg-neutral-100 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+}
+
+@layer base {
+  /* Preflight resets buttons to `cursor: default`; interactive means pointer. */
+  button:not(:disabled),
+  [role='button']:not(:disabled) {
+    cursor: pointer;
+  }
 }

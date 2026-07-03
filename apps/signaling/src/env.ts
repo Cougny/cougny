@@ -14,6 +14,8 @@ const EnvSchema = z.object({
   AUTH_JWT_SECRET: z.string().min(16, 'AUTH_JWT_SECRET must be at least 16 characters'),
   /** Postgres connection for call records (via @cougny/db). */
   DATABASE_URL: z.string().min(1),
+  /** Upper bound on peers simultaneously waiting to be matched (backpressure). */
+  SIGNALING_MAX_QUEUE: z.coerce.number().int().positive().default(10_000),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
