@@ -57,7 +57,10 @@
     "permissionRetry": "Grant access and try again",
     "errorGeneric": "Something went wrong. Please try again.",
     "countryLabel": "Country",
-    "comingSoon": "Coming soon"
+    "comingSoon": "Coming soon",
+    "chatToggle": "Open chat",
+    "chatClose": "Close chat",
+    "chat": "Chat"
   },
   "report": {
     "title": "Report this person",

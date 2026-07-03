@@ -7,6 +7,7 @@ import { VideoView } from '@/components/VideoView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -28,6 +29,7 @@ export default function HomePage(): React.ReactElement {
   // targets the right room even if the peer leaves mid-form.
   const [reportTarget, setReportTarget] = useState<{ roomId: string; peerId: string } | null>(null);
   const [reportThanks, setReportThanks] = useState(false);
+  const [chatOpen, setChatOpen] = useState(false);
 
   useEffect(() => {
     if (!reportThanks) return;
@@ -80,9 +82,9 @@ export default function HomePage(): React.ReactElement {
   };
 
   return (
-    <main className="flex h-dvh flex-col">
-      {/* Video stage: stack on mobile, side-by-side on sm+. Top ~67% mobile, ~73% desktop. */}
-      <div className="flex min-h-0 flex-[2] flex-col gap-3 p-3 sm:flex-[7] sm:flex-row md:flex-[8]">
+    <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[65fr_35fr]">
+      {/* Video stage: fills remaining space. */}
+      <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
         <VideoPanel label={t('you')} muted={!call.micEnabled} mutedLabel={t('micOffBadge')}>
           {call.localStream && call.cameraEnabled ? (
             <VideoView
@@ -166,28 +168,95 @@ export default function HomePage(): React.ReactElement {
         </div>
       )}
 
-      {/* Bottom: ~33% mobile, ~30% tablet, ~27% desktop. Controls + chat stack on mobile. */}
-      <div className="flex min-h-0 flex-[1] flex-col overflow-hidden border-t border-neutral-200 bg-white sm:flex-[3] sm:flex-row md:flex-[3] dark:border-neutral-800 dark:bg-neutral-950">
-        <div className="w-full min-w-0 flex-[3] sm:w-1/2 sm:flex-none">
-          <MatchControls
-            status={call.status}
-            onStart={call.start}
-            onSkip={call.next}
-            onStop={call.stop}
-            onPreferencesChange={call.updatePreferences}
-          />
-        </div>
-
-        <div className="flex w-full min-w-0 flex-[2] flex-col border-t border-neutral-200 bg-neutral-50 sm:w-1/2 sm:flex-1 sm:border-l sm:border-t-0 dark:border-neutral-800 dark:bg-neutral-900/40">
-          <ChatPanel
-            messages={call.chatMessages}
-            ready={call.chatReady && call.status === 'connected'}
-            peerTyping={call.peerTyping}
-            onSend={call.sendChatMessage}
-            onTyping={call.sendTyping}
-          />
-        </div>
+      {/* Bottom: exactly 35% of screen. */}
+      <div className="overflow-visible border-t border-neutral-200/50 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+        <MatchControls
+          status={call.status}
+          onStart={call.start}
+          onSkip={call.next}
+          onStop={call.stop}
+          onPreferencesChange={call.updatePreferences}
+        />
       </div>
+
+      {/* Floating theme toggle — same size & column as chat button. */}
+      <ThemeToggle />
+
+      {/* Floating chat button — always clickable. */}
+      <button
+        onClick={() => setChatOpen(!chatOpen)}
+        aria-label={t('chatToggle')}
+        className={`fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition hover:scale-105 active:scale-95 ${
+          call.status === 'connected'
+            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
+            : 'bg-neutral-300 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
+        }`}
+      >
+        {chatOpen ? (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="h-5 w-5"
+          >
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        ) : (
+          <svg
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            className="h-5 w-5"
+          >
+            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+          </svg>
+        )}
+      </button>
+
+      {/* Floating chat window. */}
+      {chatOpen && (
+        <div className="fixed bottom-20 right-4 z-40 flex h-[60vh] max-h-[500px] w-[calc(100vw-2rem)] max-w-80 flex-col rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900 sm:w-96">
+          <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-700">
+            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+              {t('chat')}
+            </span>
+            <button
+              onClick={() => setChatOpen(false)}
+              aria-label={t('chatClose')}
+              className="rounded-full p-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+            >
+              <svg
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth={2}
+                className="h-4 w-4"
+              >
+                <line x1="18" y1="6" x2="6" y2="18" />
+                <line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+          <div className="flex min-h-0 flex-1 flex-col">
+            {call.status === 'connected' ? (
+              <ChatPanel
+                messages={call.chatMessages}
+                ready={call.chatReady && call.status === 'connected'}
+                peerTyping={call.peerTyping}
+                onSend={call.sendChatMessage}
+                onTyping={call.sendTyping}
+              />
+            ) : (
+              <div className="flex flex-1 items-center justify-center px-4 text-center text-sm text-neutral-400 dark:text-neutral-500">
+                {t('chatWaiting')}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </main>
   );
 }
