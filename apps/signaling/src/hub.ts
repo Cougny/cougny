@@ -7,9 +7,9 @@ import {
   type SignalPayload,
 } from '@cougny/protocol';
 import { Connection } from './connection.js';
-import { Matchmaker } from './matchmaker.js';
+import { Matchmaker, DEFAULT_MAX_WAITING } from './matchmaker.js';
 import { recordCallEnd, recordCallStart } from './calls.js';
-import { matchesTotal, messagesTotal, rateLimitedTotal } from './metrics.js';
+import { matchesTotal, messagesTotal, queueRejectedTotal, rateLimitedTotal } from './metrics.js';
 import { logger } from './logger.js';
 
 /**
@@ -19,7 +19,11 @@ import { logger } from './logger.js';
  */
 export class Hub {
   private readonly connections = new Map<string, Connection>();
-  private readonly matchmaker = new Matchmaker();
+  private readonly matchmaker: Matchmaker;
+
+  constructor(maxQueue: number = DEFAULT_MAX_WAITING) {
+    this.matchmaker = new Matchmaker(maxQueue);
+  }
 
   register(sessionId: string, socket: ConstructorParameters<typeof Connection>[2]): Connection {
     const id = randomUUID();
@@ -99,12 +103,24 @@ export class Hub {
     if (connection.state === 'matched') this.leaveRoom(connection, 'skipped');
     connection.state = 'queued';
 
-    const match = this.matchmaker.enqueue(
+    const result = this.matchmaker.enqueue(
       connection.id,
       connection.sessionId,
       connection.preferences,
     );
-    if (!match) {
+
+    if (result.status === 'rejected') {
+      // Pool is at capacity; shed load rather than growing memory unbounded.
+      queueRejectedTotal.inc();
+      connection.state = 'idle';
+      connection.send({
+        t: 'error',
+        payload: { code: 'queue_full', message: 'Matchmaking is at capacity; try again shortly.' },
+      });
+      return;
+    }
+
+    if (result.status === 'waiting') {
       connection.send({
         t: 'queued',
         payload: { position: this.matchmaker.positionOf(connection.id) },
@@ -112,8 +128,8 @@ export class Hub {
       return;
     }
 
-    const a = this.connections.get(match.a);
-    const b = this.connections.get(match.b);
+    const a = this.connections.get(result.match.a);
+    const b = this.connections.get(result.match.b);
     if (!a || !b) {
       // A peer vanished between enqueue and pairing; requeue the survivor with
       // the preferences it originally asked for.

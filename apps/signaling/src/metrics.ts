@@ -28,6 +28,12 @@ export const rateLimitedTotal = new Counter({
   registers: [registry],
 });
 
+export const queueRejectedTotal = new Counter({
+  name: 'cougny_signaling_queue_rejected_total',
+  help: 'Join attempts rejected because the matchmaking queue was at capacity.',
+  registers: [registry],
+});
+
 export const rejectedHandshakesTotal = new Counter({
   name: 'cougny_signaling_rejected_handshakes_total',
   help: 'WebSocket upgrades rejected at the handshake.',

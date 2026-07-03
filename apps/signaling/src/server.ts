@@ -15,7 +15,7 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
  * valid session token (`?token=`, minted by the API).
  */
 export function createSignalingServer(): { start: () => void; stop: () => Promise<void> } {
-  const hub = new Hub();
+  const hub = new Hub(env.SIGNALING_MAX_QUEUE);
   observeHub(hub);
 
   const httpServer = createServer((req, res) => {
