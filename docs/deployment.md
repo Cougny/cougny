@@ -53,6 +53,11 @@ Let's Encrypt issuance requires the first three to resolve before the stack
 starts. `turn.cougny.com` needs no certificate in the default setup — see
 [TURN over TLS](#turn-over-tls).
 
+> **Cloudflare users:** create all four records as **DNS only** (grey cloud),
+> not Proxied. Cloudflare cannot proxy TURN's UDP traffic, and its proxy TLS
+> conflicts with Caddy's ACME issuance. Proxying `www`/`api` later requires
+> switching to Cloudflare origin certificates ("Full (strict)") deliberately.
+
 ## 3. Bootstrap the host
 
 As root on the fresh host, run
