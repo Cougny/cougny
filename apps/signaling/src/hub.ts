@@ -115,7 +115,7 @@ export class Hub {
       connection.state = 'idle';
       connection.send({
         t: 'error',
-        payload: { code: 'queue_full', message: 'Matchmaking is at capacity; try again shortly.' },
+        payload: { code: 'queue_full', message: 'queue_full' },
       });
       return;
     }
