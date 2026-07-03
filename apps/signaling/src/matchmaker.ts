@@ -8,11 +8,6 @@ export interface WaitingPeer {
   enqueuedAt: number;
 }
 
-export interface Match {
-  a: string;
-  b: string;
-}
-
 /**
  * Outcome of an {@link Matchmaker.enqueue} call:
  * - `matched`  — paired with a waiting peer; neither remains queued.
@@ -20,7 +15,7 @@ export interface Match {
  * - `rejected` — the pool is at capacity; the peer was not queued.
  */
 export type EnqueueResult =
-  | { status: 'matched'; match: Match }
+  | { status: 'matched'; match: { a: string; b: string } }
   | { status: 'waiting' }
   | { status: 'rejected'; reason: 'full' };
 
