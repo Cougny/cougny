@@ -2,7 +2,11 @@ import type { FastifyInstance } from 'fastify';
 import type { ZodTypeProvider } from 'fastify-type-provider-zod';
 import { createHash } from 'node:crypto';
 import { prisma } from '@cougny/db';
-import { CreateSessionResponseSchema, type CreateSessionResponse } from '@cougny/protocol';
+import {
+  CreateSessionResponseSchema,
+  ErrorResponseSchema,
+  type CreateSessionResponse,
+} from '@cougny/protocol';
 import { signSessionToken } from '../tokens.js';
 
 /**
@@ -13,10 +17,13 @@ export async function registerSessionRoutes(app: FastifyInstance): Promise<void>
   app.withTypeProvider<ZodTypeProvider>().post(
     '/sessions',
     {
+      // Per IP: sessions are minted once per browser and cached client-side,
+      // so anything beyond a trickle is a bot loop.
+      config: { rateLimit: { max: 10, timeWindow: '1 minute' } },
       schema: {
         tags: ['session'],
         summary: 'Create an anonymous session',
-        response: { 200: CreateSessionResponseSchema },
+        response: { 200: CreateSessionResponseSchema, 429: ErrorResponseSchema },
       },
     },
     async (request): Promise<CreateSessionResponse> => {

@@ -80,6 +80,7 @@ export const ServerMessageSchema = z.discriminatedUnion('t', [
     t: z.literal('matched'),
     payload: z.object({
       roomId: z.string(),
+      /** The peer's anonymous session id — referenced when filing a report. */
       peerId: z.string(),
       /** Perfect-negotiation role: the polite peer yields on offer collisions. */
       polite: z.boolean(),

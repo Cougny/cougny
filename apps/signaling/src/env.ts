@@ -10,6 +10,10 @@ const EnvSchema = z.object({
   SIGNALING_PORT: z.coerce.number().int().positive().default(4001),
   /** Comma-separated allowlist of browser origins permitted to connect. */
   SIGNALING_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
+  /** Must match the API's secret — session tokens are verified at the socket handshake. */
+  AUTH_JWT_SECRET: z.string().min(16, 'AUTH_JWT_SECRET must be at least 16 characters'),
+  /** Postgres connection for call records (via @cougny/db). */
+  DATABASE_URL: z.string().min(1),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

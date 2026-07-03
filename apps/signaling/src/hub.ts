@@ -8,6 +8,8 @@ import {
 } from '@cougny/protocol';
 import { Connection } from './connection.js';
 import { Matchmaker } from './matchmaker.js';
+import { recordCallEnd, recordCallStart } from './calls.js';
+import { matchesTotal, messagesTotal, rateLimitedTotal } from './metrics.js';
 import { logger } from './logger.js';
 
 /**
@@ -19,15 +21,24 @@ export class Hub {
   private readonly connections = new Map<string, Connection>();
   private readonly matchmaker = new Matchmaker();
 
-  register(socket: ConstructorParameters<typeof Connection>[1]): Connection {
+  register(sessionId: string, socket: ConstructorParameters<typeof Connection>[2]): Connection {
     const id = randomUUID();
-    const connection = new Connection(id, socket);
+    const connection = new Connection(id, sessionId, socket);
     this.connections.set(id, connection);
-    logger.debug({ id, total: this.connections.size }, 'connection registered');
+    logger.debug({ id, sessionId, total: this.connections.size }, 'connection registered');
     return connection;
   }
 
   handleRaw(connection: Connection, data: string): void {
+    if (!connection.messageBucket.tryConsume()) {
+      rateLimitedTotal.inc();
+      connection.send({
+        t: 'error',
+        payload: { code: 'rate_limited', message: 'Too many messages; slow down.' },
+      });
+      return;
+    }
+
     let json: unknown;
     try {
       json = JSON.parse(data);
@@ -45,6 +56,7 @@ export class Hub {
       return;
     }
 
+    messagesTotal.inc({ type: parsed.message.t });
     this.dispatch(connection, parsed.message);
   }
 
@@ -69,10 +81,29 @@ export class Hub {
   }
 
   private onQueueJoin(connection: Connection, preferences: MatchPreferences): void {
+    if (!connection.joinBucket.tryConsume()) {
+      rateLimitedTotal.inc();
+      connection.send({
+        t: 'error',
+        payload: { code: 'rate_limited', message: 'Rejoining too quickly; slow down.' },
+      });
+      return;
+    }
+
+    connection.preferences = preferences;
+    this.enqueue(connection);
+  }
+
+  /** Queue a connection with its stored preferences, pairing immediately if possible. */
+  private enqueue(connection: Connection): void {
     if (connection.state === 'matched') this.leaveRoom(connection, 'skipped');
     connection.state = 'queued';
 
-    const match = this.matchmaker.enqueue(connection.id, preferences);
+    const match = this.matchmaker.enqueue(
+      connection.id,
+      connection.sessionId,
+      connection.preferences,
+    );
     if (!match) {
       connection.send({
         t: 'queued',
@@ -84,9 +115,10 @@ export class Hub {
     const a = this.connections.get(match.a);
     const b = this.connections.get(match.b);
     if (!a || !b) {
-      // A peer vanished between enqueue and pairing; requeue the survivor.
+      // A peer vanished between enqueue and pairing; requeue the survivor with
+      // the preferences it originally asked for.
       const survivor = a ?? b;
-      if (survivor) this.onQueueJoin(survivor, {});
+      if (survivor) this.enqueue(survivor);
       return;
     }
 
@@ -102,9 +134,15 @@ export class Hub {
     a.peerId = b.id;
     b.peerId = a.id;
 
-    // Perfect-negotiation roles: exactly one peer is "polite".
-    a.send({ t: 'matched', payload: { roomId, peerId: b.id, polite: true } });
-    b.send({ t: 'matched', payload: { roomId, peerId: a.id, polite: false } });
+    // The room is persisted so moderation reports can later be validated
+    // against who actually shared it.
+    recordCallStart(roomId, a.sessionId, b.sessionId);
+    matchesTotal.inc();
+
+    // Peers learn each other's anonymous session id (needed to file a report)
+    // and their perfect-negotiation role: exactly one peer is "polite".
+    a.send({ t: 'matched', payload: { roomId, peerId: b.sessionId, polite: true } });
+    b.send({ t: 'matched', payload: { roomId, peerId: a.sessionId, polite: false } });
     logger.debug({ roomId, a: a.id, b: b.id }, 'peers matched');
   }
 
@@ -135,6 +173,8 @@ export class Hub {
 
   /** Tear down the caller's room and notify the peer, if any. */
   private leaveRoom(connection: Connection, reason: PeerLeftReason): void {
+    if (connection.roomId) recordCallEnd(connection.roomId, reason);
+
     const peer = this.peerOf(connection);
     if (peer) {
       peer.send({ t: 'peer.left', payload: { reason } });
@@ -155,5 +195,9 @@ export class Hub {
 
   get connectionCount(): number {
     return this.connections.size;
+  }
+
+  get queueSize(): number {
+    return this.matchmaker.size;
   }
 }

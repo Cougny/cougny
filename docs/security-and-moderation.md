@@ -18,7 +18,15 @@ what exists today and what is deliberately still open.
 - **Origin allowlist.** Both the API (CORS) and the signaling server
   (`verifyClient`) reject browser origins outside `SIGNALING_ALLOWED_ORIGINS`.
 - **Bearer auth.** ICE credentials and reports require a valid session token, so
-  TURN credentials aren't handed to anonymous scrapers.
+  TURN credentials aren't handed to anonymous scrapers. The **signaling socket
+  requires the same token at the handshake** (`?token=`), verified against the
+  shared `AUTH_JWT_SECRET` — unauthenticated upgrades are rejected before a
+  connection exists.
+- **Rate limiting.** The API throttles per IP globally, with tighter per-route
+  limits on session creation (per IP) and reports (per session). The signaling
+  server enforces a per-connection token bucket on inbound frames plus a
+  dedicated throttle on `queue.join` re-queues, answering with the protocol's
+  `rate_limited` error code.
 - **Ephemeral TURN credentials.** Time-boxed HMAC credentials; the shared secret
   never reaches the browser. See
   [webrtc.md](./webrtc.md#ice--turn-credentials).
@@ -29,9 +37,14 @@ what exists today and what is deliberately still open.
 
 ## Moderation (today)
 
-- **Reporting.** A peer can be reported via `POST /v1/reports` with a reason
-  (`nudity`, `harassment`, `minor`, `spam`, `other`). Reports are linked to the
-  `Call` and both sessions and stored with status `OPEN`.
+- **Reporting.** A peer can be reported in-call (flag button → reason dialog)
+  via `POST /v1/reports` with a reason (`nudity`, `harassment`, `minor`,
+  `spam`, `other`). Reports are linked to the `Call` and both sessions and
+  stored with status `OPEN`.
+- **Participants are verified server-side.** The signaling hub records every
+  match as a `Call` row; the API only accepts a report if the reporter's
+  session was in that room and the reported id is the _other_ participant
+  (`403` otherwise). A report can never name an arbitrary session.
 - **Skip / leave.** `peer.leave` immediately tears down the room and notifies
   the other side. Disconnects are detected via the socket heartbeat.
 
@@ -40,14 +53,12 @@ what exists today and what is deliberately still open.
 These are intentionally **not** built yet; track them in
 [roadmap.md](./roadmap.md):
 
-- **No rate limiting / abuse throttling.** Redis is provisioned for this.
 - **No automated content moderation** (e.g. nudity detection on the client
   before publish).
 - **No moderator tooling** to review the `Report` queue or ban abusive sessions.
 - **No age assurance** beyond the guidelines notice.
-- **Reporter/reported ids are trusted from the client** in the report payload;
-  these should be cross-checked against the server's record of the room's
-  participants before actioning.
+- **Rate limits are per instance for signaling** (and for the API unless
+  `REDIS_URL` is set) — horizontal scale-out needs the shared Redis backing.
 
 > If you extend Cougny toward production, treat the items above as launch
 > blockers for a public deployment, not nice-to-haves.

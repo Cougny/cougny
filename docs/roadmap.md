@@ -23,22 +23,26 @@ This tracks what's deliberately deferred and where it plugs in.
 
 ## Safety & moderation
 
-- **Rate limiting & abuse throttling** (Redis) — join spam, report spam,
-  reconnect storms.
-- **Server-side validation of report participants** — verify the reported id
-  actually shared the room (see
-  [security-and-moderation.md](./security-and-moderation.md#known-gaps-open-work)).
+- ~~**Rate limiting & abuse throttling** — join spam, report spam, reconnect
+  storms.~~ Done: `@fastify/rate-limit` on the API (Redis-shared when
+  `REDIS_URL` is set) and per-connection token buckets on signaling. Remaining:
+  Redis-backed signaling limits for multi-instance deployments.
+- ~~**Server-side validation of report participants.**~~ Done: the hub persists
+  every match as a `Call` row and `POST /v1/reports` verifies both parties
+  against it.
 - **Moderator dashboard** over the `Report` queue; session bans.
 - **Automated content moderation** and **age assurance**.
 
 ## Product
 
 - **Interests / locale matching UI** — the protocol already carries
-  `MatchPreferences`; expose it in the web client.
-- **In-call report flow** — wire the report UI (strings already in
-  `messages/en.json`) to `POST /v1/reports`.
-- **Reconnection UX** — auto-retry on transient ICE failures before showing
-  "peer left".
+  `MatchPreferences` and the matchmaker already pairs on shared interests;
+  expose it in the web client. (Gender is the only preference surfaced today;
+  country/interests controls were pulled back out pending real matching.)
+- ~~**In-call report flow.**~~ Done: flag button → reason dialog →
+  `POST /v1/reports`, then auto-skip.
+- ~~**Reconnection UX.**~~ Done: transient ICE drops get a grace period and one
+  ICE restart before "peer left".
 - **Accounts (optional)** — the `Session` model can gain an optional `User`
   relation without reshaping existing tables.
 
@@ -48,7 +52,7 @@ This tracks what's deliberately deferred and where it plugs in.
   `@cougny/protocol` contracts.
 - **Additional locales** — add `messages/<locale>.json` and a negotiation step
   in [`src/i18n/request.ts`](../apps/web/src/i18n/request.ts).
-- **Observability** — structured logs exist (pino); add metrics/tracing and
-  dashboards.
+- **Observability** — structured logs (pino) and Prometheus `/metrics` on both
+  services exist; still open: tracing, dashboards, and alerting.
 - **E2E tests** — Playwright against two browser contexts to exercise a full
   match→connect→next cycle.

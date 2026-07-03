@@ -1,6 +1,9 @@
 import {
+  CreateReportResponseSchema,
   CreateSessionResponseSchema,
   IceServersResponseSchema,
+  type CreateReportRequest,
+  type CreateReportResponse,
   type CreateSessionResponse,
   type IceServersResponse,
 } from '@cougny/protocol';
@@ -39,6 +42,20 @@ export async function fetchIceServers(token: string): Promise<IceServersResponse
   });
   if (!res.ok) throw new Error(`Failed to fetch ICE servers (${res.status})`);
   return IceServersResponseSchema.parse(await res.json());
+}
+
+/** File a moderation report against the current call's peer. */
+export async function createReport(
+  token: string,
+  body: CreateReportRequest,
+): Promise<CreateReportResponse> {
+  const res = await fetch(`${clientEnv.apiUrl}/v1/reports`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${token}`, 'content-type': 'application/json' },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) throw new Error(`Failed to submit report (${res.status})`);
+  return CreateReportResponseSchema.parse(await res.json());
 }
 
 function readCachedSession(): StoredSession | null {

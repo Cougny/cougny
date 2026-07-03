@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
-import { useLocale, useTranslations } from 'next-intl';
+import { useTranslations } from 'next-intl';
 import type { GenderPreference, MatchPreferences } from '@cougny/protocol';
 import type { CallStatus } from '@/hooks/useRandomCall';
 import { NextIcon, StopIcon } from '@/components/icons';
@@ -9,19 +9,11 @@ import { NextIcon, StopIcon } from '@/components/icons';
 const PREFS_STORAGE_KEY = 'cougny.matchPreferences';
 const PREFS_CHANGE_EVENT = 'cougny:prefs-change';
 
-const COUNTRY_CODES = [
-  'AE', 'AR', 'AU', 'BD', 'BR', 'CA', 'CN', 'DE', 'EG', 'ES',
-  'FR', 'GB', 'ID', 'IN', 'IT', 'JP', 'KR', 'MX', 'NG', 'NL',
-  'PH', 'PK', 'PL', 'PT', 'RU', 'SA', 'TH', 'TR', 'UA', 'US',
-  'VN', 'ZA',
-] as const;
-
 interface StoredPrefs {
-  country: string;
   gender: GenderPreference;
 }
 
-const DEFAULT_PREFS: StoredPrefs = { country: 'any', gender: 'any' };
+const DEFAULT_PREFS: StoredPrefs = { gender: 'any' };
 
 function subscribeToPrefs(onChange: () => void): () => void {
   window.addEventListener(PREFS_CHANGE_EVENT, onChange);
@@ -36,9 +28,10 @@ function parsePrefs(raw: string): StoredPrefs {
   try {
     const parsed = JSON.parse(raw) as Partial<StoredPrefs>;
     return {
-      country: typeof parsed.country === 'string' ? parsed.country : DEFAULT_PREFS.country,
       gender:
-        parsed.gender === 'male' || parsed.gender === 'female' ? parsed.gender : DEFAULT_PREFS.gender,
+        parsed.gender === 'male' || parsed.gender === 'female'
+          ? parsed.gender
+          : DEFAULT_PREFS.gender,
     };
   } catch {
     return DEFAULT_PREFS;
@@ -53,7 +46,7 @@ interface MatchControlsProps {
   onPreferencesChange: (preferences: MatchPreferences) => void;
 }
 
-/** Four equal control blocks: start/stop, skip, country filter, gender filter. */
+/** Three equal control blocks: start/stop, skip, gender filter. */
 export function MatchControls({
   status,
   onStart,
@@ -62,7 +55,6 @@ export function MatchControls({
   onPreferencesChange,
 }: MatchControlsProps): React.ReactElement {
   const t = useTranslations('call');
-  const locale = useLocale();
 
   const rawPrefs = useSyncExternalStore(
     subscribeToPrefs,
@@ -71,18 +63,9 @@ export function MatchControls({
   );
   const prefs = useMemo(() => parsePrefs(rawPrefs), [rawPrefs]);
 
-  // Countries sorted by their name in the user's language.
-  const countries = useMemo(() => {
-    const displayNames = new Intl.DisplayNames([locale], { type: 'region' });
-    return COUNTRY_CODES.map((code) => ({ code, name: displayNames.of(code) ?? code })).sort(
-      (a, b) => a.name.localeCompare(b.name, locale),
-    );
-  }, [locale]);
-
   // Keep the call hook's queue.join payload in sync with the stored filters.
   useEffect(() => {
     onPreferencesChange({
-      country: prefs.country === 'any' ? undefined : prefs.country,
       gender: prefs.gender === 'any' ? undefined : prefs.gender,
     });
   }, [prefs, onPreferencesChange]);
@@ -92,12 +75,12 @@ export function MatchControls({
     window.dispatchEvent(new Event(PREFS_CHANGE_EVENT));
   };
 
-  const [openPicker, setOpenPicker] = useState<'country' | 'gender' | null>(null);
+  const [openPicker, setOpenPicker] = useState<'gender' | null>(null);
 
   const idle = status === 'idle' || status === 'error';
 
   return (
-    <div className="grid h-full grid-cols-4 gap-2 p-3">
+    <div className="grid h-full grid-cols-3 gap-2 p-3">
       {idle ? (
         <button
           onClick={onStart}
@@ -123,21 +106,6 @@ export function MatchControls({
         <NextIcon className="h-5 w-5" />
         {t('skip')}
       </button>
-
-      <PickerBlock
-        label={t('countryLabel')}
-        value={prefs.country}
-        open={openPicker === 'country'}
-        onToggle={() => setOpenPicker(openPicker === 'country' ? null : 'country')}
-        onSelect={(country) => {
-          setPrefs({ country });
-          setOpenPicker(null);
-        }}
-        options={[
-          { value: 'any', label: t('anyOption') },
-          ...countries.map(({ code, name }) => ({ value: code, label: name })),
-        ]}
-      />
 
       <PickerBlock
         label={t('genderLabel')}

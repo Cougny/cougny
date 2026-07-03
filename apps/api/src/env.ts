@@ -17,6 +17,10 @@ const EnvSchema = z.object({
 
   // Browser origins allowed to call the API.
   SIGNALING_ALLOWED_ORIGINS: z.string().default('http://localhost:3000'),
+
+  // Optional shared Redis for rate limiting across API instances. When unset,
+  // limits are tracked in-process (fine for a single instance / local dev).
+  REDIS_URL: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);

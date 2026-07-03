@@ -8,6 +8,8 @@ reports.
 - **Fastify 5**
 - **fastify-type-provider-zod** — validation + serialization from Zod
 - **@fastify/swagger** + **@fastify/swagger-ui** — generated OpenAPI + docs UI
+- **@fastify/rate-limit** (+ **ioredis** when `REDIS_URL` is set) — abuse throttling
+- **prom-client** — Prometheus metrics at `GET /metrics`
 - **@cougny/db** (Prisma) and **@cougny/protocol** (contracts)
 - **jsonwebtoken** for anonymous session tokens
 
@@ -16,16 +18,17 @@ reports.
 ```
 src/
   index.ts              Entrypoint (listen + graceful shutdown)
-  app.ts                buildApp(): plugins, swagger, routes (no listen)
+  app.ts                buildApp(): plugins, rate limits, swagger, routes (no listen)
   env.ts                Zod-validated environment
   auth.ts               requireSession(): bearer-token guard
   tokens.ts             Sign/verify session JWTs
   turn.ts               Mint ephemeral coturn HMAC credentials
+  metrics.ts            Prometheus registry + request-duration histogram
   routes/
     health.ts           GET /healthz
-    session.ts          POST /v1/sessions
+    session.ts          POST /v1/sessions       (rate-limited per IP)
     ice.ts              GET /v1/ice-servers
-    reports.ts          POST /v1/reports
+    reports.ts          POST /v1/reports        (participant-validated, rate-limited per session)
 ```
 
 `buildApp()` is separate from `index.ts` so tests can use Fastify's `inject()`

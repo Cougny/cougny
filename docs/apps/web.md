@@ -16,15 +16,19 @@ the WebRTC peer connection.
 src/
   app/
     layout.tsx        Root layout; wraps app in NextIntlClientProvider
-    page.tsx          Landing page ("Start a call")
-    call/page.tsx     The call screen (stage + PiP self-view + controls)
+    page.tsx          The call screen (video stage + controls + chat)
+    terms/page.tsx    Terms & conditions
     globals.css       Tailwind entry
   components/
     VideoView.tsx     Binds a MediaStream to a <video> element
+    MatchControls.tsx Start/skip/stop + gender preference
+    ChatPanel.tsx     Data-channel chat with typing indicator
+    ReportDialog.tsx  In-call moderation report (reason + details → API)
+    icons.tsx         Inline SVG icon set
   hooks/
     useRandomCall.ts  Core: media + signaling + RTCPeerConnection state machine
   lib/
-    api.ts            Session bootstrap + ICE fetch (with localStorage cache)
+    api.ts            Session bootstrap, ICE fetch, report submission
     signaling.ts      Typed WebSocket client
     env.ts            NEXT_PUBLIC_* config
   i18n/
@@ -40,17 +44,17 @@ call lifecycle and exposes a small surface to the UI:
 
 ```ts
 const {
-  status, // idle | requesting-media | searching | connecting | connected | peer-left | error
+  status, // idle | requesting-media | searching | connecting | connected | reconnecting | peer-left | error
   error, // an i18n key, or null
   localStream,
   remoteStream,
-  cameraEnabled,
-  micEnabled,
+  roomId,
+  peerId, // the peer's anonymous session id (used for reports)
+  chatMessages,
   start,
   next,
   stop,
-  toggleCamera,
-  toggleMic,
+  // … media toggles, chat send/typing, preference updates
 } = useRandomCall();
 ```
 
@@ -58,11 +62,15 @@ Responsibilities:
 
 1. `getUserMedia` for camera/mic (started by an explicit user gesture).
 2. Bootstrap an anonymous session and fetch ICE servers.
-3. Open the signaling socket and join the queue.
+3. Open the signaling socket (authenticated with the session token) and join
+   the queue with the stored match preferences.
 4. On `matched`, create the `RTCPeerConnection` and run **perfect negotiation**
-   (see [webrtc.md](../webrtc.md#perfect-negotiation)).
+   (see [webrtc.md](../webrtc.md#perfect-negotiation)), plus a negotiated data
+   channel for chat.
 5. Render `remoteStream`; support **Next** (skip), **Stop**, and mute toggles.
-6. Clean up media/sockets on unmount.
+6. Ride out transient ICE drops: a `reconnecting` grace period and one ICE
+   restart before declaring `peer-left`.
+7. Clean up media/sockets on unmount.
 
 ## <a id="i18n"></a>Internationalization
 

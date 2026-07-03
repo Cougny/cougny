@@ -22,6 +22,15 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
   app.withTypeProvider<ZodTypeProvider>().post(
     '/reports',
     {
+      config: {
+        // Keyed by session token, so one abusive session cannot flood the
+        // moderation queue from behind a shared IP.
+        rateLimit: {
+          max: 5,
+          timeWindow: '1 minute',
+          keyGenerator: (request) => request.headers.authorization ?? request.ip,
+        },
+      },
       schema: {
         tags: ['moderation'],
         summary: 'Report a peer from a call',
@@ -30,7 +39,9 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
         response: {
           200: CreateReportResponseSchema,
           401: ErrorResponseSchema,
+          403: ErrorResponseSchema,
           404: ErrorResponseSchema,
+          429: ErrorResponseSchema,
         },
       },
     },
@@ -40,9 +51,23 @@ export async function registerReportRoutes(app: FastifyInstance): Promise<void> 
 
       const { roomId, reportedPeerId, reason, details } = request.body;
 
-      const call = await prisma.call.findUnique({ where: { roomId }, select: { id: true } });
+      const call = await prisma.call.findUnique({
+        where: { roomId },
+        select: { id: true, peerAId: true, peerBId: true },
+      });
       if (!call) {
         reply.code(404).send({ error: { code: 'not_found', message: 'Unknown call.' } });
+        return;
+      }
+
+      // Only a participant may report, and only against the peer who actually
+      // shared the room — a report can never name an arbitrary session.
+      const isParticipant = sessionId === call.peerAId || sessionId === call.peerBId;
+      const otherPeerId = sessionId === call.peerAId ? call.peerBId : call.peerAId;
+      if (!isParticipant || reportedPeerId !== otherPeerId) {
+        reply.code(403).send({
+          error: { code: 'forbidden', message: 'Reports must name the peer from your own call.' },
+        });
         return;
       }
 

@@ -6,7 +6,14 @@ import { ensureSession, fetchIceServers } from '@/lib/api';
 import { SignalingClient } from '@/lib/signaling';
 
 export type CallStatus =
-  'idle' | 'requesting-media' | 'searching' | 'connecting' | 'connected' | 'peer-left' | 'error';
+  | 'idle'
+  | 'requesting-media'
+  | 'searching'
+  | 'connecting'
+  | 'connected'
+  | 'reconnecting'
+  | 'peer-left'
+  | 'error';
 
 export interface ChatMessage {
   id: string;
@@ -48,6 +55,10 @@ const CHAT_CHANNEL_ID = 0;
 const CHAT_MESSAGE_MAX_LENGTH = 2000;
 const TYPING_SEND_INTERVAL_MS = 1500;
 const TYPING_EXPIRY_MS = 3000;
+
+// How long a dropped ICE connection may try to recover (including one ICE
+// restart) before the call is declared over.
+const RECONNECT_GRACE_MS = 15_000;
 
 /** Frames exchanged over the chat data channel. */
 type ChatFrame = { t: 'text'; text: string } | { t: 'typing' };
@@ -97,6 +108,15 @@ export function useRandomCall(): UseRandomCall {
   const makingOfferRef = useRef(false);
   const ignoreOfferRef = useRef(false);
 
+  // Reconnection bookkeeping: one ICE restart per drop, bounded by a deadline.
+  const iceRestartedRef = useRef(false);
+  const reconnectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const clearReconnectTimer = useCallback(() => {
+    if (reconnectTimerRef.current) clearTimeout(reconnectTimerRef.current);
+    reconnectTimerRef.current = null;
+  }, []);
+
   const teardownPeer = useCallback(() => {
     chatChannelRef.current?.close();
     chatChannelRef.current = null;
@@ -113,7 +133,9 @@ export function useRandomCall(): UseRandomCall {
     setPeerId(null);
     makingOfferRef.current = false;
     ignoreOfferRef.current = false;
-  }, []);
+    iceRestartedRef.current = false;
+    clearReconnectTimer();
+  }, [clearReconnectTimer]);
 
   const stop = useCallback(() => {
     teardownPeer();
@@ -125,98 +147,128 @@ export function useRandomCall(): UseRandomCall {
     setStatus('idle');
   }, [teardownPeer]);
 
-  const createPeerConnection = useCallback((peerIsPolite: boolean) => {
-    const signaling = signalingRef.current;
-    const localMedia = localStreamRef.current;
-    if (!signaling || !localMedia) return null;
+  const createPeerConnection = useCallback(
+    (peerIsPolite: boolean) => {
+      const signaling = signalingRef.current;
+      const localMedia = localStreamRef.current;
+      if (!signaling || !localMedia) return null;
 
-    politeRef.current = peerIsPolite;
-    const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
-    pcRef.current = pc;
+      politeRef.current = peerIsPolite;
+      const pc = new RTCPeerConnection({ iceServers: iceServersRef.current });
+      pcRef.current = pc;
 
-    for (const track of localMedia.getTracks()) pc.addTrack(track, localMedia);
+      for (const track of localMedia.getTracks()) pc.addTrack(track, localMedia);
 
-    const chatChannel = pc.createDataChannel('chat', {
-      negotiated: true,
-      id: CHAT_CHANNEL_ID,
-    });
-    chatChannelRef.current = chatChannel;
-    chatChannel.onopen = () => setChatReady(true);
-    chatChannel.onclose = () => setChatReady(false);
-    chatChannel.onmessage = ({ data }) => {
-      const frame = parseChatFrame(data);
-      if (!frame) return;
-
-      if (frame.t === 'typing') {
-        setPeerTyping(true);
-        if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
-        peerTypingTimerRef.current = setTimeout(() => setPeerTyping(false), TYPING_EXPIRY_MS);
-        return;
-      }
-
-      const text = frame.text.slice(0, CHAT_MESSAGE_MAX_LENGTH).trim();
-      if (!text) return;
-      if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
-      setPeerTyping(false);
-      setChatMessages((messages) => [
-        ...messages,
-        { id: crypto.randomUUID(), from: 'peer', text, at: Date.now() },
-      ]);
-    };
-
-    pc.onnegotiationneeded = async () => {
-      try {
-        makingOfferRef.current = true;
-        await pc.setLocalDescription();
-        const local = pc.localDescription;
-        if (local) {
-          signaling.send({
-            t: 'signal',
-            payload: { kind: 'sdp', description: { type: local.type, sdp: local.sdp } },
-          });
-        }
-      } catch {
-        setError('errorGeneric');
-      } finally {
-        makingOfferRef.current = false;
-      }
-    };
-
-    pc.onicecandidate = ({ candidate }) => {
-      signaling.send({
-        t: 'signal',
-        payload: {
-          kind: 'ice',
-          candidate: candidate
-            ? {
-                candidate: candidate.candidate,
-                sdpMid: candidate.sdpMid,
-                sdpMLineIndex: candidate.sdpMLineIndex,
-                usernameFragment: candidate.usernameFragment,
-              }
-            : null,
-        },
+      const chatChannel = pc.createDataChannel('chat', {
+        negotiated: true,
+        id: CHAT_CHANNEL_ID,
       });
-    };
+      chatChannelRef.current = chatChannel;
+      chatChannel.onopen = () => setChatReady(true);
+      chatChannel.onclose = () => setChatReady(false);
+      chatChannel.onmessage = ({ data }) => {
+        const frame = parseChatFrame(data);
+        if (!frame) return;
 
-    pc.ontrack = ({ streams }) => {
-      if (streams[0]) setRemoteStream(streams[0]);
-    };
+        if (frame.t === 'typing') {
+          setPeerTyping(true);
+          if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
+          peerTypingTimerRef.current = setTimeout(() => setPeerTyping(false), TYPING_EXPIRY_MS);
+          return;
+        }
 
-    pc.onconnectionstatechange = () => {
-      switch (pc.connectionState) {
-        case 'connected':
-          setStatus('connected');
-          break;
-        case 'failed':
-        case 'closed':
-          setStatus('peer-left');
-          break;
-      }
-    };
+        const text = frame.text.slice(0, CHAT_MESSAGE_MAX_LENGTH).trim();
+        if (!text) return;
+        if (peerTypingTimerRef.current) clearTimeout(peerTypingTimerRef.current);
+        setPeerTyping(false);
+        setChatMessages((messages) => [
+          ...messages,
+          { id: crypto.randomUUID(), from: 'peer', text, at: Date.now() },
+        ]);
+      };
 
-    return pc;
-  }, []);
+      pc.onnegotiationneeded = async () => {
+        try {
+          makingOfferRef.current = true;
+          await pc.setLocalDescription();
+          const local = pc.localDescription;
+          if (local) {
+            signaling.send({
+              t: 'signal',
+              payload: { kind: 'sdp', description: { type: local.type, sdp: local.sdp } },
+            });
+          }
+        } catch {
+          setError('errorGeneric');
+        } finally {
+          makingOfferRef.current = false;
+        }
+      };
+
+      pc.onicecandidate = ({ candidate }) => {
+        signaling.send({
+          t: 'signal',
+          payload: {
+            kind: 'ice',
+            candidate: candidate
+              ? {
+                  candidate: candidate.candidate,
+                  sdpMid: candidate.sdpMid,
+                  sdpMLineIndex: candidate.sdpMLineIndex,
+                  usernameFragment: candidate.usernameFragment,
+                }
+              : null,
+          },
+        });
+      };
+
+      pc.ontrack = ({ streams }) => {
+        if (streams[0]) setRemoteStream(streams[0]);
+      };
+
+      // Transient drops get a grace period (and one ICE restart) before the
+      // call is declared over — switching networks shouldn't end the chat.
+      const enterReconnecting = (): void => {
+        setStatus('reconnecting');
+        if (!reconnectTimerRef.current) {
+          reconnectTimerRef.current = setTimeout(() => {
+            reconnectTimerRef.current = null;
+            teardownPeer();
+            setStatus('peer-left');
+          }, RECONNECT_GRACE_MS);
+        }
+      };
+
+      pc.onconnectionstatechange = () => {
+        switch (pc.connectionState) {
+          case 'connected':
+            clearReconnectTimer();
+            iceRestartedRef.current = false;
+            setStatus('connected');
+            break;
+          case 'disconnected':
+            enterReconnecting();
+            break;
+          case 'failed':
+            if (!iceRestartedRef.current) {
+              iceRestartedRef.current = true;
+              pc.restartIce();
+              enterReconnecting();
+            } else {
+              teardownPeer();
+              setStatus('peer-left');
+            }
+            break;
+          case 'closed':
+            setStatus('peer-left');
+            break;
+        }
+      };
+
+      return pc;
+    },
+    [clearReconnectTimer, teardownPeer],
+  );
 
   const handleSignal = useCallback(async (payload: SignalPayload) => {
     const pc = pcRef.current;

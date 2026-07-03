@@ -26,6 +26,13 @@ Authorization: Bearer <token>
 
 Tokens are anonymous (they carry only a session id) and expire after 7 days.
 
+## Rate limiting
+
+All routes are throttled (generous global ceiling per IP); session creation
+(per IP) and reports (per session token) have tighter limits. Over-limit
+requests get `429` with the standard error envelope and code `rate_limited`.
+With `REDIS_URL` set, counters are shared across API instances.
+
 ## Endpoints
 
 ### `GET /healthz`
@@ -64,20 +71,28 @@ session.
 
 ### `POST /v1/reports`
 
-File a moderation report against a peer. Requires a session.
+File a moderation report against the peer from a call. Requires a session.
+The server verifies against its own `Call` record that the reporter was a
+participant of the room and that `reportedPeerId` is the _other_ participant.
 
 ```json
 // request body
 {
   "roomId": "…",
-  "reportedPeerId": "…",
+  "reportedPeerId": "…",            // the peer's session id from `matched`
   "reason": "harassment",           // nudity | harassment | minor | spam | other
   "details": "optional free text"
 }
 // 200
 { "reportId": "clx…" }
-// 401 unauthorized · 404 unknown call
+// 401 unauthorized · 403 not a participant / wrong peer · 404 unknown call · 429 rate limited
 ```
+
+### `GET /metrics`
+
+Prometheus scrape endpoint (process defaults + request-duration histogram).
+Hidden from the OpenAPI document; restrict it to internal networks in
+production.
 
 ## Error shape
 

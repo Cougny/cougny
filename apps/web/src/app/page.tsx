@@ -1,22 +1,39 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import { useRandomCall, type CallStatus } from '@/hooks/useRandomCall';
 import { VideoView } from '@/components/VideoView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
+import { ReportDialog } from '@/components/ReportDialog';
 import {
   CameraIcon,
   CameraOffIcon,
+  FlagIcon,
   MicIcon,
   MicOffIcon,
   SpinnerIcon,
   UserIcon,
 } from '@/components/icons';
 
+const REPORT_TOAST_MS = 4000;
+
 export default function HomePage(): React.ReactElement {
   const t = useTranslations('call');
+  const tReport = useTranslations('report');
   const call = useRandomCall();
+
+  // Snapshot the call identifiers when the dialog opens, so the report still
+  // targets the right room even if the peer leaves mid-form.
+  const [reportTarget, setReportTarget] = useState<{ roomId: string; peerId: string } | null>(null);
+  const [reportThanks, setReportThanks] = useState(false);
+
+  useEffect(() => {
+    if (!reportThanks) return;
+    const timer = setTimeout(() => setReportThanks(false), REPORT_TOAST_MS);
+    return () => clearTimeout(timer);
+  }, [reportThanks]);
 
   const renderStrangerOverlay = (): React.ReactElement => {
     if (call.error) {
@@ -106,8 +123,40 @@ export default function HomePage(): React.ReactElement {
               {renderStrangerOverlay()}
             </div>
           )}
+
+          {call.status === 'connected' && call.roomId && call.peerId && (
+            <button
+              onClick={() => setReportTarget({ roomId: call.roomId!, peerId: call.peerId! })}
+              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/70 px-3 py-1.5 text-xs font-medium text-neutral-200 backdrop-blur transition hover:bg-red-600/90 hover:text-white"
+            >
+              <FlagIcon className="h-3.5 w-3.5" />
+              {t('report')}
+            </button>
+          )}
         </VideoPanel>
       </div>
+
+      {reportTarget && (
+        <ReportDialog
+          roomId={reportTarget.roomId}
+          peerId={reportTarget.peerId}
+          onClose={() => setReportTarget(null)}
+          onSubmitted={() => {
+            setReportTarget(null);
+            setReportThanks(true);
+            call.next();
+          }}
+        />
+      )}
+
+      {reportThanks && (
+        <div
+          role="status"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-neutral-800 px-5 py-2.5 text-sm font-medium text-neutral-100 shadow-2xl"
+        >
+          {tReport('thanks')}
+        </div>
+      )}
 
       {/* Bottom ~20%: controls on the left, chat on the right. */}
       <div className="flex min-h-0 flex-[2] border-t border-neutral-800">
@@ -139,6 +188,8 @@ function statusMessageKey(status: CallStatus): string {
   switch (status) {
     case 'searching':
       return 'searching';
+    case 'reconnecting':
+      return 'reconnecting';
     case 'peer-left':
       return 'peerLeft';
     default:

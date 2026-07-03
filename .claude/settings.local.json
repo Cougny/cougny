@@ -11,7 +11,9 @@
       "Bash(git -c user.name='yourscemal' -c commit.gpgsign=false commit -q -m \"Add Claude project config\")",
       "Bash(git push *)",
       "Bash(docker version *)",
-      "Bash(docker info *)"
+      "Bash(docker info *)",
+      "Bash(pnpm --filter @cougny/signaling add jsonwebtoken prom-client '@cougny/db@workspace:*')",
+      "Bash(pnpm --filter @cougny/signaling add -D @types/jsonwebtoken)"
     ]
   }
 }

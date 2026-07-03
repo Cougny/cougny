@@ -36,8 +36,13 @@ services:
     env_file: apps/signaling/.env
     environment:
       NODE_ENV: production
+      # Reach infra by compose service name (overrides the localhost .env values).
+      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:-cougny}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
     ports:
       - '4001:4001'
+    depends_on:
+      postgres:
+        condition: service_healthy
     restart: unless-stopped
 
   web:

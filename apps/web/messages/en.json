@@ -35,7 +35,6 @@
     "skip": "Skip",
     "stop": "Stop",
     "idleHint": "Press Start to meet someone new.",
-    "countryLabel": "Country",
     "genderLabel": "Gender",
     "anyOption": "Any",
     "genderMale": "Male",
@@ -61,8 +60,10 @@
     "reasonMinor": "Under 18",
     "reasonSpam": "Spam or advertising",
     "reasonOther": "Something else",
+    "detailsPlaceholder": "Add details (optional)",
     "submit": "Submit report",
     "cancel": "Cancel",
-    "thanks": "Thanks — our team will review this."
+    "thanks": "Thanks — our team will review this.",
+    "error": "Couldn't submit your report. Please try again."
   }
 }
