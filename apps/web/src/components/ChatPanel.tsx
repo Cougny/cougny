@@ -50,7 +50,9 @@ export function ChatPanel({
       <div ref={listRef} className="min-h-0 flex-1 space-y-2 overflow-y-auto px-4 py-3">
         {messages.length === 0 && !peerTyping && (
           <div className="flex h-full items-center justify-center">
-            <p className="text-sm text-neutral-500">{ready ? t('chatEmpty') : t('chatWaiting')}</p>
+            <p className="text-sm text-neutral-400 dark:text-neutral-500">
+              {ready ? t('chatEmpty') : t('chatWaiting')}
+            </p>
           </div>
         )}
 
@@ -63,7 +65,7 @@ export function ChatPanel({
               className={`max-w-[75%] break-words rounded-2xl px-4 py-2 text-sm leading-snug shadow-sm ${
                 message.from === 'me'
                   ? 'rounded-br-md bg-brand text-brand-fg'
-                  : 'rounded-bl-md bg-neutral-800 text-neutral-100'
+                  : 'rounded-bl-md border border-neutral-200 bg-white text-neutral-900 dark:border-transparent dark:bg-neutral-800 dark:text-neutral-100'
               }`}
             >
               {message.text}
@@ -74,7 +76,7 @@ export function ChatPanel({
         {peerTyping && (
           <div className="flex justify-start">
             <div
-              className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-neutral-800 px-4 py-3"
+              className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-4 py-3 dark:border-transparent dark:bg-neutral-800"
               aria-label={t('chatTyping')}
             >
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:0ms]" />
@@ -87,7 +89,7 @@ export function ChatPanel({
 
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 border-t border-neutral-800 bg-neutral-900/60 p-3"
+        className="flex items-center gap-2 border-t border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900/60"
       >
         <input
           ref={inputRef}
@@ -100,7 +102,7 @@ export function ChatPanel({
           placeholder={t('chatPlaceholder')}
           disabled={!ready}
           maxLength={2000}
-          className="min-w-0 flex-1 rounded-full border border-neutral-700 bg-neutral-900 px-4 py-2.5 text-sm text-neutral-100 transition placeholder:text-neutral-500 focus:border-brand focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40"
+          className="min-w-0 flex-1 rounded-full border border-neutral-200 bg-neutral-100 px-4 py-2.5 text-sm text-neutral-900 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:bg-neutral-900"
         />
         <button
           type="submit"

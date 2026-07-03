@@ -7,6 +7,7 @@ import { VideoView } from '@/components/VideoView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
+import { SiteHeader } from '@/components/SiteHeader';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -39,11 +40,11 @@ export default function HomePage(): React.ReactElement {
     if (call.error) {
       return (
         <div className="space-y-4 px-6 text-center">
-          <p className="text-base text-neutral-300">{t(call.error)}</p>
+          <p className="text-base text-neutral-600 dark:text-neutral-300">{t(call.error)}</p>
           {call.error === 'permissionDenied' && (
             <button
               onClick={call.start}
-              className="rounded-full bg-brand px-6 py-2 font-semibold text-brand-fg transition hover:scale-105 hover:opacity-90 active:scale-95"
+              className="rounded-full bg-brand px-6 py-2 font-semibold text-brand-fg transition hover:scale-105 hover:bg-brand-strong active:scale-95"
             >
               {t('permissionRetry')}
             </button>
@@ -54,29 +55,37 @@ export default function HomePage(): React.ReactElement {
 
     if (call.status === 'idle') {
       return (
-        <div className="flex flex-col items-center gap-3 px-6 text-center text-neutral-600">
-          <UserIcon className="h-12 w-12" />
-          <p className="text-base text-neutral-500">{t('idleHint')}</p>
+        <div className="flex flex-col items-center gap-3 px-6 text-center">
+          <UserIcon className="h-12 w-12 text-neutral-300 dark:text-neutral-600" />
+          <p className="text-base text-neutral-500 dark:text-neutral-400">{t('idleHint')}</p>
         </div>
       );
     }
 
     if (call.status === 'peer-left') {
-      return <p className="px-6 text-center text-base text-neutral-400">{t('peerLeft')}</p>;
+      return (
+        <p className="px-6 text-center text-base text-neutral-500 dark:text-neutral-400">
+          {t('peerLeft')}
+        </p>
+      );
     }
 
     return (
       <div className="flex flex-col items-center gap-4 px-6 text-center">
         <SpinnerIcon className="h-8 w-8 animate-spin text-brand" />
-        <p className="text-base text-neutral-400">{t(statusMessageKey(call.status))}</p>
+        <p className="text-base text-neutral-500 dark:text-neutral-400">
+          {t(statusMessageKey(call.status))}
+        </p>
       </div>
     );
   };
 
   return (
-    <main className="flex h-dvh flex-col bg-neutral-950">
+    <main className="flex h-dvh flex-col">
+      <SiteHeader />
+
       {/* Video stage: you on the left, the stranger on the right (top ~80%). */}
-      <div className="flex min-h-0 flex-[8] gap-2 p-2">
+      <div className="flex min-h-0 flex-[8] gap-3 p-3">
         <VideoPanel label={t('you')} muted={!call.micEnabled} mutedLabel={t('micOffBadge')}>
           {call.localStream && call.cameraEnabled ? (
             <VideoView
@@ -86,10 +95,12 @@ export default function HomePage(): React.ReactElement {
               className="h-full w-full object-cover"
             />
           ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-3 text-neutral-600">
-              <UserIcon className="h-12 w-12" />
+            <div className="flex h-full w-full flex-col items-center justify-center gap-3">
+              <UserIcon className="h-12 w-12 text-neutral-300 dark:text-neutral-600" />
               {call.localStream && !call.cameraEnabled && (
-                <p className="text-sm">{t('cameraOffNote')}</p>
+                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                  {t('cameraOffNote')}
+                </p>
               )}
             </div>
           )}
@@ -127,7 +138,7 @@ export default function HomePage(): React.ReactElement {
           {call.status === 'connected' && call.roomId && call.peerId && (
             <button
               onClick={() => setReportTarget({ roomId: call.roomId!, peerId: call.peerId! })}
-              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/70 px-3 py-1.5 text-xs font-medium text-neutral-200 backdrop-blur transition hover:bg-red-600/90 hover:text-white"
+              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-red-600/90"
             >
               <FlagIcon className="h-3.5 w-3.5" />
               {t('report')}
@@ -152,14 +163,14 @@ export default function HomePage(): React.ReactElement {
       {reportThanks && (
         <div
           role="status"
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-neutral-800 px-5 py-2.5 text-sm font-medium text-neutral-100 shadow-2xl"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-medium text-neutral-50 shadow-2xl dark:bg-neutral-800 dark:text-neutral-100"
         >
           {tReport('thanks')}
         </div>
       )}
 
       {/* Bottom ~20%: controls on the left, chat on the right. */}
-      <div className="flex min-h-0 flex-[2] border-t border-neutral-800">
+      <div className="flex min-h-0 flex-[2] border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
         <div className="w-1/2 min-w-0">
           <MatchControls
             status={call.status}
@@ -170,7 +181,7 @@ export default function HomePage(): React.ReactElement {
           />
         </div>
 
-        <div className="flex w-1/2 min-w-0 flex-col border-l border-neutral-800 bg-neutral-900/40">
+        <div className="flex w-1/2 min-w-0 flex-col border-l border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/40">
           <ChatPanel
             messages={call.chatMessages}
             ready={call.chatReady && call.status === 'connected'}
@@ -218,7 +229,7 @@ function MediaToggle({
       title={label}
       className={`flex h-9 w-9 items-center justify-center rounded-full backdrop-blur transition hover:scale-105 active:scale-95 ${
         enabled
-          ? 'bg-neutral-950/70 text-neutral-100 hover:bg-neutral-800'
+          ? 'bg-neutral-950/60 text-white hover:bg-neutral-800/80'
           : 'bg-red-600/90 text-white hover:bg-red-500'
       }`}
     >
@@ -241,10 +252,11 @@ function VideoPanel({
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <div className="relative flex-1 overflow-hidden rounded-2xl border border-neutral-800 bg-neutral-900">
+    <div className="relative flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       {children}
 
-      <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/70 px-3 py-1 text-xs font-medium text-neutral-200 backdrop-blur">
+      {/* Chips stay dark in both themes so they read over live video. */}
+      <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1 text-xs font-medium text-white backdrop-blur">
         {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
         {label}
       </span>

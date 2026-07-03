@@ -3,6 +3,10 @@
     "name": "Cougny",
     "tagline": "Meet someone new, face to face."
   },
+  "theme": {
+    "switchToDark": "Switch to dark mode",
+    "switchToLight": "Switch to light mode"
+  },
   "terms": {
     "title": "Terms & Conditions",
     "updated": "Last updated: July 2026",
