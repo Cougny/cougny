@@ -1,0 +1,105 @@
+name: Deploy
+
+# Build all app images, push them to GHCR, then roll the production host:
+# pull the new images, run migrations, restart the stack. The server never
+# builds anything — see docs/deployment.md.
+#
+# Required repository configuration:
+#   secrets.DEPLOY_SSH_KEY          private key for the `deploy` user on the host
+#   vars.DEPLOY_HOST                e.g. 165.227.83.125
+#   vars.DEPLOY_USER                e.g. deploy
+#   vars.NEXT_PUBLIC_API_URL        e.g. https://api.cougny.com   (baked into the web bundle)
+#   vars.NEXT_PUBLIC_SIGNALING_URL  e.g. wss://signaling.cougny.com
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    strategy:
+      matrix:
+        include:
+          - image: web
+            dockerfile: apps/web/Dockerfile
+          - image: api
+            dockerfile: apps/api/Dockerfile
+          - image: signaling
+            dockerfile: apps/signaling/Dockerfile
+          - image: migrate
+            dockerfile: apps/api/Dockerfile
+            target: tools
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: docker/setup-buildx-action@v3
+
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: ${{ matrix.dockerfile }}
+          target: ${{ matrix.target || '' }}
+          push: true
+          tags: |
+            ghcr.io/cougny/cougny-${{ matrix.image }}:latest
+            ghcr.io/cougny/cougny-${{ matrix.image }}:${{ github.sha }}
+          build-args: |
+            NEXT_PUBLIC_API_URL=${{ vars.NEXT_PUBLIC_API_URL }}
+            NEXT_PUBLIC_SIGNALING_URL=${{ vars.NEXT_PUBLIC_SIGNALING_URL }}
+          cache-from: type=gha,scope=${{ matrix.image }}
+          cache-to: type=gha,scope=${{ matrix.image }},mode=max
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      packages: read
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Set up SSH
+        run: |
+          install -d -m 700 ~/.ssh
+          printf '%s\n' "${{ secrets.DEPLOY_SSH_KEY }}" > ~/.ssh/id_ed25519
+          chmod 600 ~/.ssh/id_ed25519
+          # Host key is pinned in the repo — no trust-on-first-use.
+          cp infra/known_hosts ~/.ssh/known_hosts
+
+      - name: Sync server files
+        run: |
+          ssh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} 'mkdir -p /opt/cougny/infra'
+          scp docker-compose.prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/docker-compose.prod.yml
+          scp infra/Caddyfile ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/infra/Caddyfile
+
+      - name: Pull images, migrate, restart
+        run: |
+          ssh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} \
+            "IMAGE_TAG=${{ github.sha }} REGISTRY_TOKEN=${{ secrets.GITHUB_TOKEN }} REGISTRY_USER=${{ github.actor }} bash -s" <<'SCRIPT'
+          set -euo pipefail
+          cd /opt/cougny
+          echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
+          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml --profile tools pull --quiet
+          # Migrations first, so new containers never meet an old schema.
+          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm --no-build db-migrate
+          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
+          docker image prune -f
+          docker logout ghcr.io
+          SCRIPT
