@@ -1,5 +1,8 @@
 # Cougny
 
+[![CI](https://github.com/Cougny/cougny/actions/workflows/ci.yml/badge.svg)](https://github.com/Cougny/cougny/actions/workflows/ci.yml)
+[![License: AGPL-3.0](https://img.shields.io/badge/License-AGPL--3.0-blue.svg)](./LICENSE)
+
 Random 1:1 video calling — meet someone new, face to face.
 
 Cougny pairs two people at a time for a live, peer-to-peer video chat. Media
@@ -81,11 +84,38 @@ Open http://localhost:3000.
 | `pnpm infra:up/down` | Start / stop local infrastructure |
 | `pnpm db:studio`     | Open Prisma Studio                |
 
+## Deploying
+
+The reference production deployment is a single-host Docker stack defined in
+[`docker-compose.prod.yml`](./docker-compose.prod.yml): Caddy (automatic
+Let's Encrypt TLS) in front of the three apps, plus Postgres, Redis, and
+coturn, with every secret injected by [Doppler](https://www.doppler.com) —
+no `.env` files on the server. The full walkthrough (DNS, firewall, TURN) is
+in [docs/deployment.md](./docs/deployment.md), and it works on any Ubuntu box
+with a public IP.
+
 ## Conventions
 
 - **Contracts live in `@cougny/protocol`.** The web client and the signaling
   server parse the same Zod schemas — change the wire format in one place.
 - **No hardcoded user-facing English.** All copy lives in
   `apps/web/messages/*.json` and is rendered via `next-intl`.
-- See [`CLAUDE.md`](./CLAUDE.md) / [`AGENTS.md`](./AGENTS.md) for contributor
+- See [`CONTRIBUTING.md`](./CONTRIBUTING.md) for the contribution workflow,
+  and [`CLAUDE.md`](./CLAUDE.md) / [`AGENTS.md`](./AGENTS.md) for AI-assistant
   guidance.
+
+## Security
+
+Found a vulnerability? Please report it privately — see
+[`SECURITY.md`](./SECURITY.md). Product-level safety and moderation design is
+documented in
+[docs/security-and-moderation.md](./docs/security-and-moderation.md).
+
+## License
+
+Copyright © 2026 Cemal Shabinas and Adnan Shajahan.
+
+Cougny is free software, licensed under the
+[GNU Affero General Public License v3.0](./LICENSE) (AGPL-3.0). If you run a
+modified version as a network service, the AGPL requires you to offer its
+source to your users.

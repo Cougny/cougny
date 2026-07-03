@@ -41,11 +41,11 @@ RUN set -eu; \
     node -e "const p=require(require.resolve('@prisma/client',{paths:[require('fs').realpathSync('/app/node_modules/@cougny/db')]})); if(typeof p.PrismaClient!=='function') throw new Error('generated PrismaClient not found'); console.log('Generated Prisma client present and loadable')"
 
 # ---- tools: full workspace for one-off tasks (DB migrations) ----------------
-# Used by the `db-setup` compose service; not the running API.
+# Used by the `db-migrate` compose services; not the running API.
 FROM build AS tools
 ENV NODE_ENV=production
 WORKDIR /repo/packages/db
-CMD ["pnpm", "prisma", "db", "push"]
+CMD ["pnpm", "prisma", "migrate", "deploy"]
 
 # ---- runtime: minimal (default target) -------------------------------------
 FROM node:24-alpine AS runtime
