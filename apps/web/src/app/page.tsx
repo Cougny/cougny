@@ -7,7 +7,6 @@ import { VideoView } from '@/components/VideoView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
-import { SiteHeader } from '@/components/SiteHeader';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -82,10 +81,8 @@ export default function HomePage(): React.ReactElement {
 
   return (
     <main className="flex h-dvh flex-col">
-      <SiteHeader />
-
-      {/* Video stage: you on the left, the stranger on the right (top ~80%). */}
-      <div className="flex min-h-0 flex-[8] gap-3 p-3">
+      {/* Video stage: stack on mobile, side-by-side on sm+. Top ~67% mobile, ~73% desktop. */}
+      <div className="flex min-h-0 flex-[2] flex-col gap-3 p-3 sm:flex-[7] sm:flex-row md:flex-[8]">
         <VideoPanel label={t('you')} muted={!call.micEnabled} mutedLabel={t('micOffBadge')}>
           {call.localStream && call.cameraEnabled ? (
             <VideoView
@@ -169,9 +166,9 @@ export default function HomePage(): React.ReactElement {
         </div>
       )}
 
-      {/* Bottom ~20%: controls on the left, chat on the right. */}
-      <div className="flex min-h-0 flex-[2] border-t border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-950">
-        <div className="w-1/2 min-w-0">
+      {/* Bottom: ~33% mobile, ~30% tablet, ~27% desktop. Controls + chat stack on mobile. */}
+      <div className="flex min-h-0 flex-[1] flex-col overflow-hidden border-t border-neutral-200 bg-white sm:flex-[3] sm:flex-row md:flex-[3] dark:border-neutral-800 dark:bg-neutral-950">
+        <div className="w-full min-w-0 flex-[3] sm:w-1/2 sm:flex-none">
           <MatchControls
             status={call.status}
             onStart={call.start}
@@ -181,7 +178,7 @@ export default function HomePage(): React.ReactElement {
           />
         </div>
 
-        <div className="flex w-1/2 min-w-0 flex-col border-l border-neutral-200 bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900/40">
+        <div className="flex w-full min-w-0 flex-[2] flex-col border-t border-neutral-200 bg-neutral-50 sm:w-1/2 sm:flex-1 sm:border-l sm:border-t-0 dark:border-neutral-800 dark:bg-neutral-900/40">
           <ChatPanel
             messages={call.chatMessages}
             ready={call.chatReady && call.status === 'connected'}

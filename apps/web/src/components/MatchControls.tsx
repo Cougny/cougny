@@ -80,48 +80,62 @@ export function MatchControls({
   const idle = status === 'idle' || status === 'error';
 
   return (
-    <div className="grid h-full grid-cols-3 gap-2 p-3">
-      {idle ? (
-        <button
-          onClick={onStart}
-          className="flex flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-brand to-brand-accent text-sm font-bold uppercase tracking-wider text-brand-fg shadow-lg shadow-brand/25 transition hover:scale-[1.02] hover:opacity-90 active:scale-[0.98]"
-        >
-          {t('start')}
-        </button>
-      ) : (
-        <button
-          onClick={onStop}
-          className="flex flex-col items-center justify-center gap-1 rounded-xl bg-red-600 text-sm font-bold uppercase tracking-wider text-white transition hover:scale-[1.02] hover:bg-red-500 active:scale-[0.98]"
-        >
-          <StopIcon className="h-5 w-5" />
-          {t('stop')}
-        </button>
-      )}
+    <div className="flex h-full items-center justify-center p-1.5 sm:p-3">
+      <div className="grid w-full grid-cols-4 gap-1.5 sm:gap-3">
+        {idle ? (
+          <button
+            onClick={onStart}
+            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-emerald-500 to-green-600 text-xs font-bold uppercase tracking-wider text-white shadow-lg shadow-emerald-500/25 transition hover:scale-[1.02] hover:opacity-90 active:scale-[0.98] sm:text-sm"
+          >
+            {t('start')}
+          </button>
+        ) : (
+          <button
+            onClick={onStop}
+            className="aspect-square flex flex-col items-center justify-center gap-1 rounded-xl bg-red-600 text-xs font-bold uppercase tracking-wider text-white transition hover:scale-[1.02] hover:bg-red-500 active:scale-[0.98] sm:text-sm"
+          >
+            <StopIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            {t('stop')}
+          </button>
+        )}
 
-      <button
-        onClick={onSkip}
-        disabled={idle}
-        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-brand/30 bg-brand/10 text-sm font-bold uppercase tracking-wider text-brand transition hover:scale-[1.02] hover:bg-brand/20 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand/50 dark:bg-brand/20 dark:text-violet-200 dark:hover:bg-brand/30"
-      >
-        <NextIcon className="h-5 w-5" />
-        {t('skip')}
-      </button>
+        <button
+          onClick={onSkip}
+          disabled={idle}
+          className="aspect-square flex flex-col items-center justify-center gap-1 rounded-xl border border-brand/30 bg-brand/10 text-xs font-bold uppercase tracking-wider text-brand transition hover:scale-[1.02] hover:bg-brand/20 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand/50 dark:bg-brand/20 dark:text-violet-200 dark:hover:bg-brand/30 sm:text-sm"
+        >
+          <NextIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          {t('skip')}
+        </button>
 
-      <PickerBlock
-        label={t('genderLabel')}
-        value={prefs.gender}
-        open={openPicker === 'gender'}
-        onToggle={() => setOpenPicker(openPicker === 'gender' ? null : 'gender')}
-        onSelect={(gender) => {
-          setPrefs({ gender: gender as GenderPreference });
-          setOpenPicker(null);
-        }}
-        options={[
-          { value: 'any', label: t('anyOption') },
-          { value: 'male', label: t('genderMale') },
-          { value: 'female', label: t('genderFemale') },
-        ]}
-      />
+        <PickerBlock
+          label={t('genderLabel')}
+          value={prefs.gender}
+          open={openPicker === 'gender'}
+          onToggle={() => setOpenPicker(openPicker === 'gender' ? null : 'gender')}
+          onSelect={(gender) => {
+            setPrefs({ gender: gender as GenderPreference });
+            setOpenPicker(null);
+          }}
+          options={[
+            { value: 'any', label: t('anyOption') },
+            { value: 'male', label: t('genderMale') },
+            { value: 'female', label: t('genderFemale') },
+          ]}
+        />
+
+        <button
+          disabled
+          className="aspect-square flex flex-col items-center justify-center gap-1 rounded-xl border border-dashed border-neutral-300 bg-neutral-100 text-xs font-bold uppercase tracking-wider text-neutral-400 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-600 sm:text-sm"
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+            {t('countryLabel')}
+          </span>
+          <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
+            {t('comingSoon')}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
@@ -159,12 +173,12 @@ function PickerBlock({
   }, [open, onToggle]);
 
   return (
-    <div className="relative min-w-0">
+    <div className="relative aspect-square min-w-0">
       <button
         onClick={onToggle}
         aria-haspopup="listbox"
         aria-expanded={open}
-        className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl border bg-white px-3 transition hover:border-neutral-300 dark:bg-neutral-900 dark:hover:border-neutral-600 ${
+        className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl border bg-white px-1 transition hover:border-neutral-300 dark:bg-neutral-900 dark:hover:border-neutral-600 ${
           open ? 'border-brand dark:border-brand' : 'border-neutral-200 dark:border-neutral-800'
         }`}
       >
