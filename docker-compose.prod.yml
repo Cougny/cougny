@@ -35,7 +35,7 @@ services:
       - '443:443'
       - '443:443/udp' # HTTP/3
     environment:
-      WEB_DOMAIN: ${WEB_DOMAIN:?e.g. www.cougny.com}
+      WEB_DOMAIN: ${WEB_DOMAIN:?e.g. cougny.com}
       API_DOMAIN: ${API_DOMAIN:?e.g. api.cougny.com}
       SIGNALING_DOMAIN: ${SIGNALING_DOMAIN:?e.g. signaling.cougny.com}
       ACME_EMAIL: ${ACME_EMAIL:?contact email for Let's Encrypt}
@@ -82,7 +82,7 @@ services:
       DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
       REDIS_URL: redis://redis:6379
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?generate with `openssl rand -hex 32`}
-      SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://www.cougny.com}
+      SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://cougny.com}
       # Public ICE endpoints handed to browsers; must resolve to this host.
       STUN_URL: ${STUN_URL:?e.g. stun:turn.cougny.com:3478}
       TURN_URL: ${TURN_URL:?e.g. turn:turn.cougny.com:3478}
@@ -111,7 +111,7 @@ services:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?generate with `openssl rand -hex 32`}
-      SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://www.cougny.com}
+      SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://cougny.com}
       SIGNALING_MAX_QUEUE: ${SIGNALING_MAX_QUEUE:-10000}
     healthcheck:
       test: ['CMD', 'wget', '-qO', '/dev/null', 'http://127.0.0.1:4001/healthz']
