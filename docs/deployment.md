@@ -1,18 +1,23 @@
 # Deployment
 
-How to run the full Cougny stack on a single host — written for a DigitalOcean
-droplet, but any Ubuntu box with a public IP works the same way.
+How Cougny runs in production: a single host (written for a DigitalOcean
+droplet, any Ubuntu box with a public IP works), deployed **continuously from
+GitHub Actions** — CI builds every app image, pushes to GHCR, then rolls the
+host over SSH. The server never builds anything.
 
-The production stack is defined in
+The stack is defined in
 [`docker-compose.prod.yml`](../docker-compose.prod.yml):
 
 ```
-                        ┌──────────────────────── droplet ────────────────────────┐
+                        ┌──────────────────────── host ───────────────────────────┐
   https://www.cougny.com ──► Caddy ──► web (Next.js :3000)                        │
   https://api.cougny.com ──► (TLS) ──► api (Fastify :4000) ──► postgres, redis    │
   wss://signaling.cougny.com ────────► signaling (ws :4001) ──► postgres          │
   turn:turn.cougny.com:3478 ─────────► coturn (host network, UDP relay range)     │
                         └──────────────────────────────────────────────────────────┘
+
+  push to main ──► GitHub Actions ──► build images ──► GHCR ──► ssh deploy@host:
+                                                                pull → migrate → up
 ```
 
 - **Caddy** terminates TLS with automatic Let's Encrypt certificates and
@@ -20,20 +25,22 @@ The production stack is defined in
   camera/microphone access (`getUserMedia`) on insecure origins.
 - **postgres** and **redis** are only reachable on the internal Docker network.
 - **coturn** uses host networking so ICE candidates carry real addresses.
-- **Doppler** injects every secret and config value — no `.env` files exist on
-  the server.
+- **Doppler** injects every runtime secret on the host — no `.env` files exist
+  in production.
+- **CI deploys as the unprivileged `deploy` user**, pulls prebuilt images by
+  commit SHA, runs `prisma migrate deploy`, then restarts the stack.
 
 ## 1. Prerequisites
 
 - A domain with DNS you control (examples below use `cougny.com`).
 - A [Doppler](https://www.doppler.com) workplace.
-- A droplet: Ubuntu 24.04 LTS, **4 GB RAM recommended** (the Next.js image
-  build is memory-hungry; on 2 GB add swap first).
+- An Ubuntu 24.04 host with a public IP. 2 GB RAM is enough — images are
+  built in CI, never on the host (the bootstrap script adds swap regardless).
 
 ## 2. DNS
 
-Create `A` records pointing at the droplet's public IPv4 (and `AAAA` for IPv6
-if you enable it):
+Create `A` records pointing at the host's public IPv4 (and `AAAA` for IPv6 if
+you enable it):
 
 | Record                 | Purpose                     |
 | ---------------------- | --------------------------- |
@@ -46,15 +53,21 @@ Let's Encrypt issuance requires the first three to resolve before the stack
 starts. `turn.cougny.com` needs no certificate in the default setup — see
 [TURN over TLS](#turn-over-tls).
 
-## 3. Install Docker and Doppler on the droplet
+## 3. Bootstrap the host
+
+As root on the fresh host, run
+[`scripts/droplet-bootstrap.sh`](../scripts/droplet-bootstrap.sh) with the CI
+deploy **public** key (the counterpart of the `DEPLOY_SSH_KEY` secret) as its
+argument:
 
 ```bash
-# Docker Engine + Compose plugin (official repository)
-curl -fsSL https://get.docker.com | sh
-
-# Doppler CLI
-curl -Ls --tlsv1.2 --proto "=https" --retry 3 https://cli.doppler.com/install.sh | sh
+bash droplet-bootstrap.sh 'ssh-ed25519 AAAA... cougny-ci-deploy'
 ```
+
+Idempotent; it installs Docker + Doppler, creates the unprivileged `deploy`
+user CI connects as, opens the firewall (SSH, 80, 443 tcp+udp, 3478 tcp+udp,
+relay range 49160–49400/udp — Postgres and Redis are never exposed), adds
+2 GB swap if the host has none, and disables SSH password authentication.
 
 ## 4. Configure Doppler
 
@@ -72,8 +85,6 @@ the secrets below — `doppler secrets set` or the dashboard, either works.
 | `STUN_URL`                  | `stun:turn.cougny.com:3478`              |
 | `TURN_URL`                  | `turn:turn.cougny.com:3478`              |
 | `SIGNALING_ALLOWED_ORIGINS` | `https://www.cougny.com`                 |
-| `NEXT_PUBLIC_API_URL`       | `https://api.cougny.com`                 |
-| `NEXT_PUBLIC_SIGNALING_URL` | `wss://signaling.cougny.com`             |
 | `WEB_DOMAIN`                | `www.cougny.com`                         |
 | `API_DOMAIN`                | `api.cougny.com`                         |
 | `SIGNALING_DOMAIN`          | `signaling.cougny.com`                   |
@@ -90,71 +101,84 @@ the secrets below — `doppler secrets set` or the dashboard, either works.
 | `TURN_MAX_PORT`       | `49400`  | Relay range upper bound            |
 | `SIGNALING_MAX_QUEUE` | `10000`  | Matchmaking queue backpressure cap |
 
-Then authenticate the droplet with a **service token** scoped to that config
-(read-only, revocable — never use a personal token on a server):
+Then authenticate the host with a **service token** scoped to that config
+(read-only, revocable — never use a personal token on a server). The token
+belongs to the `deploy` user, scoped to the app directory:
 
 ```bash
 # Dashboard: project → config → Access → Generate Service Token
-export HISTIGNORE='doppler*'   # keep the token out of shell history
-doppler configure set token 'dp.st.prd.XXXX' --scope /opt/cougny
+sudo -u deploy doppler configure set token 'dp.st.prd.XXXX' --scope /opt/cougny
 ```
 
-## 5. Firewall
+## 5. Configure GitHub
 
-Open only what the edge needs (DigitalOcean Cloud Firewall or `ufw`):
+The [Deploy workflow](../.github/workflows/deploy.yml) needs one secret and
+four variables (repo **Settings → Secrets and variables → Actions**):
 
-| Port(s)     | Proto   | Purpose                     |
-| ----------- | ------- | --------------------------- |
-| 22          | tcp     | SSH                         |
-| 80          | tcp     | ACME challenges, HTTP→HTTPS |
-| 443         | tcp+udp | HTTPS (+ HTTP/3)            |
-| 3478        | tcp+udp | STUN/TURN                   |
-| 49160–49400 | udp     | TURN relay range            |
+| Kind     | Name                        | Value                                     |
+| -------- | --------------------------- | ----------------------------------------- |
+| secret   | `DEPLOY_SSH_KEY`            | Private key for the `deploy` user         |
+| variable | `DEPLOY_HOST`               | Host IP, e.g. `165.227.83.125`            |
+| variable | `DEPLOY_USER`               | `deploy`                                  |
+| variable | `NEXT_PUBLIC_API_URL`       | `https://api.cougny.com` (build-time)     |
+| variable | `NEXT_PUBLIC_SIGNALING_URL` | `wss://signaling.cougny.com` (build-time) |
 
-The relay range must match `TURN_MIN_PORT`/`TURN_MAX_PORT`. Postgres (5432)
-and Redis (6379) are **not** published and must not be opened.
+Generate the deploy keypair with
+`ssh-keygen -t ed25519 -N '' -C cougny-ci-deploy`; the private key becomes the
+secret, the public key goes to the bootstrap script (§3).
 
-## 6. First deploy
+The host's SSH public key is pinned in
+[`infra/known_hosts`](../infra/known_hosts) — CI refuses to connect to
+anything else. If the host is ever rebuilt, re-run
+`ssh-keyscan -t ed25519 <ip> > infra/known_hosts` and commit.
 
-```bash
-git clone https://github.com/Cougny/cougny.git /opt/cougny
-cd /opt/cougny
+The `NEXT_PUBLIC_*` values are plain variables, not secrets: they are public
+URLs inlined into the client JavaScript bundle at image build time.
 
-# Build images and start the stack (Doppler injects all ${VAR} values)
-doppler run -- docker compose -f docker-compose.prod.yml up -d --build
+## 6. Deploy
 
-# Apply database migrations (first run and after any schema change)
-doppler run -- docker compose -f docker-compose.prod.yml run --rm db-migrate
-```
+Every push to `main` triggers the
+[Deploy workflow](../.github/workflows/deploy.yml) (or run it manually via
+**Actions → Deploy → Run workflow**):
 
-Caddy obtains certificates on first start; allow a few seconds after `up`
-before the sites answer.
+1. **build** — all four images (`web`, `api`, `signaling`, `migrate`) are
+   built and pushed to GHCR, tagged `latest` and with the commit SHA.
+2. **deploy** — over SSH as `deploy`: sync `docker-compose.prod.yml` +
+   `Caddyfile` to `/opt/cougny`, pull the SHA-tagged images, run
+   `prisma migrate deploy` (migrations run **before** the new containers
+   start), then `docker compose up -d`.
+
+Compose only recreates containers whose image or config changed, so a deploy
+that touches one service restarts one service. To roll back, re-run the
+Deploy workflow from the last good commit in the Actions UI.
 
 ## 7. Verify
 
 ```bash
-docker compose -f docker-compose.prod.yml ps          # all services healthy
+ssh deploy@<host> 'docker compose -f /opt/cougny/docker-compose.prod.yml ps'
 curl -fsS https://api.cougny.com/healthz              # {"status":"ok",...}
 curl -fsS -o /dev/null -w '%{http_code}\n' https://www.cougny.com   # 200
 ```
 
-Then open the web client in two browsers (or a browser and a phone off-wifi to
-exercise TURN) and confirm a call connects.
+Then open the web client in two browsers (or a browser and a phone off-wifi
+to exercise TURN) and confirm a call connects.
 
-## 8. Updating
+## Manual deploy (fallback)
+
+The host can also run the stack without CI — useful before the first
+workflow run or if Actions is down. As `deploy` on the host:
 
 ```bash
 cd /opt/cougny
-git pull
-doppler run -- docker compose -f docker-compose.prod.yml up -d --build
-# Only needed when packages/db/prisma/migrations changed:
-doppler run -- docker compose -f docker-compose.prod.yml run --rm db-migrate
-docker image prune -f   # reclaim space from superseded image layers
+doppler run -- docker compose -f docker-compose.prod.yml --profile tools pull
+doppler run -- docker compose -f docker-compose.prod.yml run --rm --no-build db-migrate
+doppler run -- docker compose -f docker-compose.prod.yml up -d --no-build
 ```
 
-Compose only recreates containers whose image or config changed. Changing any
-`NEXT_PUBLIC_*` secret requires a rebuild (`--build`) because those values are
-inlined into the client bundle at build time.
+(Requires a `docker login ghcr.io` with a token that can read packages while
+the repository is private.) Building on the host instead of pulling also
+works: drop `--no-build` and add `--build` — the compose file keeps its
+`build:` sections for exactly this.
 
 ## <a id="turn-over-tls"></a>TURN over TLS (optional hardening)
 
@@ -192,10 +216,12 @@ Redis is ephemeral by design and needs no backup.
 
 ## Troubleshooting
 
-| Symptom                             | Check                                                                                                             |
-| ----------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| Site unreachable / cert errors      | `docker compose -f docker-compose.prod.yml logs caddy` — DNS must resolve to the droplet before ACME can issue.   |
-| `up` fails with "required variable" | The named secret is missing in Doppler, or the command wasn't run through `doppler run`.                          |
-| Calls connect on wifi, fail on LTE  | TURN problem: relay range open in firewall? `TURN_URL` resolves to the droplet? `docker compose ... logs coturn`. |
-| Camera prompt never appears         | Page not on HTTPS — check you're hitting Caddy, not a raw port.                                                   |
-| API/signaling unhealthy             | `docker compose ... logs api signaling` — usually a bad `DATABASE_URL` or unapplied migrations.                   |
+| Symptom                             | Check                                                                                                                        |
+| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Deploy workflow fails at SSH        | `DEPLOY_SSH_KEY` secret matches the public key in `/home/deploy/.ssh/authorized_keys`; `infra/known_hosts` matches the host. |
+| Deploy fails at `doppler run`       | The Doppler service token isn't configured for the `deploy` user with `--scope /opt/cougny` (§4).                            |
+| Site unreachable / cert errors      | `docker compose logs caddy` — DNS must resolve to the host before ACME can issue.                                            |
+| `up` fails with "required variable" | The named secret is missing in the Doppler config.                                                                           |
+| Calls connect on wifi, fail on LTE  | TURN problem: relay range open in firewall? `TURN_URL` resolves to the host? `docker compose logs coturn`.                   |
+| Camera prompt never appears         | Page not on HTTPS — check you're hitting Caddy, not a raw port.                                                              |
+| API/signaling unhealthy             | `docker compose logs api signaling` — usually a bad `DATABASE_URL` or unapplied migrations.                                  |
