@@ -10,11 +10,13 @@ The stack is defined in
 
 ```
                         ┌──────────────────────── host ───────────────────────────┐
-  https://www.cougny.com ──► Caddy ──► web (Next.js :3000)                        │
+  https://cougny.com ──────► Caddy ──► web (Next.js :3000)                         │
   https://api.cougny.com ──► (TLS) ──► api (Fastify :4000) ──► postgres, redis    │
   wss://signaling.cougny.com ────────► signaling (ws :4001) ──► postgres          │
   turn:turn.cougny.com:3478 ─────────► coturn (host network, UDP relay range)     │
                         └──────────────────────────────────────────────────────────┘
+
+  www.cougny.com is a redirect to the apex (cougny.com); see DNS below.
 
   push to main ──► GitHub Actions ──► build images ──► GHCR ──► ssh deploy@host:
                                                                 pull → migrate → up
@@ -39,12 +41,12 @@ The stack is defined in
 
 ## 2. DNS
 
-Create `A` records pointing at the host's public IPv4 (and `AAAA` for IPv6 if
-you enable it):
+`cougny.com` is the primary domain; `www` redirects to it. Create `A` records
+pointing at the host's public IPv4 (and `AAAA` for IPv6 if you enable it):
 
 | Record                 | Purpose                     |
 | ---------------------- | --------------------------- |
-| `www.cougny.com`       | Web client (Caddy)          |
+| `cougny.com` (apex)    | Web client (Caddy)          |
 | `api.cougny.com`       | HTTP API (Caddy)            |
 | `signaling.cougny.com` | WebSocket signaling (Caddy) |
 | `turn.cougny.com`      | STUN/TURN (coturn, direct)  |
@@ -53,10 +55,16 @@ Let's Encrypt issuance requires the first three to resolve before the stack
 starts. `turn.cougny.com` needs no certificate in the default setup — see
 [TURN over TLS](#turn-over-tls).
 
-> **Cloudflare users:** create all four records as **DNS only** (grey cloud),
-> not Proxied. Cloudflare cannot proxy TURN's UDP traffic, and its proxy TLS
-> conflicts with Caddy's ACME issuance. Proxying `www`/`api` later requires
-> switching to Cloudflare origin certificates ("Full (strict)") deliberately.
+> **Cloudflare users:** create the four records above as **DNS only** (grey
+> cloud), not Proxied. Cloudflare cannot proxy TURN's UDP traffic, and its
+> proxy TLS conflicts with Caddy's ACME issuance.
+>
+> The `www` → apex redirect is handled at Cloudflare's edge, so `www` is the
+> one exception: add a **Proxied** `A` record for `www` (any valid IP — it's
+> never contacted), then a **Redirect Rule**: match `https://www.*`, redirect
+> to `https://${1}` (301, preserve query string). A Redirect Rule only fires
+> on proxied hostnames, which is why `www` must be orange while everything
+> else is grey.
 
 ## 3. Bootstrap the host
 
@@ -89,8 +97,8 @@ the secrets below — `doppler secrets set` or the dashboard, either works.
 | `TURN_REALM`                | `cougny.com`                             |
 | `STUN_URL`                  | `stun:turn.cougny.com:3478`              |
 | `TURN_URL`                  | `turn:turn.cougny.com:3478`              |
-| `SIGNALING_ALLOWED_ORIGINS` | `https://www.cougny.com`                 |
-| `WEB_DOMAIN`                | `www.cougny.com`                         |
+| `SIGNALING_ALLOWED_ORIGINS` | `https://cougny.com`                     |
+| `WEB_DOMAIN`                | `cougny.com`                             |
 | `API_DOMAIN`                | `api.cougny.com`                         |
 | `SIGNALING_DOMAIN`          | `signaling.cougny.com`                   |
 | `ACME_EMAIL`                | `ops@cougny.com` (Let's Encrypt contact) |
@@ -162,7 +170,7 @@ Deploy workflow from the last good commit in the Actions UI.
 ```bash
 ssh deploy@<host> 'docker compose -f /opt/cougny/docker-compose.prod.yml ps'
 curl -fsS https://api.cougny.com/healthz              # {"status":"ok",...}
-curl -fsS -o /dev/null -w '%{http_code}\n' https://www.cougny.com   # 200
+curl -fsS -o /dev/null -w '%{http_code}\n' https://cougny.com       # 200
 ```
 
 Then open the web client in two browsers (or a browser and a phone off-wifi
