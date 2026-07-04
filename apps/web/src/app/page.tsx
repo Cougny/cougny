@@ -8,6 +8,7 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { WelcomeDialog, useWelcomeAccepted } from '@/components/WelcomeDialog';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -30,6 +31,7 @@ export default function HomePage(): React.ReactElement {
   const [reportTarget, setReportTarget] = useState<{ roomId: string; peerId: string } | null>(null);
   const [reportThanks, setReportThanks] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [welcomeAccepted, setWelcomeAccepted] = useState(useWelcomeAccepted());
 
   useEffect(() => {
     if (!reportThanks) return;
@@ -83,6 +85,8 @@ export default function HomePage(): React.ReactElement {
 
   return (
     <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
+      {!welcomeAccepted && <WelcomeDialog onAccept={() => setWelcomeAccepted(true)} />}
+
       {/* Video stage: fills remaining space. */}
       <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
         <VideoPanel label={t('you')}>
@@ -125,7 +129,7 @@ export default function HomePage(): React.ReactElement {
           )}
 
           {/* COUGNY watermark — top-left of self view. */}
-          <span className="pointer-events-none absolute left-3 top-3 font-display text-3xl text-white/30 select-none">
+          <span className="pointer-events-none absolute left-3 top-3 z-10 font-display text-3xl text-neutral-400/50 select-none">
             COUGNY
           </span>
         </VideoPanel>
@@ -193,7 +197,7 @@ export default function HomePage(): React.ReactElement {
       )}
 
       {/* Bottom: exactly 35% of screen. */}
-      <div className="overflow-visible border-t border-neutral-200/50 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="overflow-visible border-t border-neutral-200/50 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950">
         <MatchControls
           status={call.status}
           onStart={call.start}

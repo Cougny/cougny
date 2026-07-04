@@ -75,5 +75,18 @@
     "cancel": "Cancel",
     "thanks": "Thanks — our team will review this.",
     "error": "Couldn't submit your report. Please try again."
+  },
+  "welcome": {
+    "title": "Welcome to Cougny",
+    "slogan": "Real faces. Real people. Real conversations.",
+    "intro": "Connect face-to-face with someone new. No accounts, no profiles — just genuine human connection.",
+    "ageCheck": "I am at least 18 years old",
+    "csamCheck": "I will not share CSAM or illegal content",
+    "termsCheck": "I accept the Terms & Privacy Policy",
+    "ageText": "You must be 18 or older to use this service. By checking this box, you confirm your eligibility.",
+    "csamText": "Child sexual abuse material (CSAM), exploitation, and illegal content are strictly prohibited. Violations are reported to authorities immediately.",
+    "termsText": "By using Cougny, you agree to our Terms of Service and Privacy Policy. Nudity, harassment, hate speech, and illegal activity are banned and result in permanent suspension.",
+    "agreeButton": "Enter Cougny",
+    "allRequired": "Please accept all agreements to continue."
   }
 }
