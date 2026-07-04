@@ -5,6 +5,10 @@ import { logger } from './logger.js';
 import { verifySessionToken } from './auth.js';
 import { observeHub, registry, rejectedHandshakesTotal } from './metrics.js';
 import { Hub } from './hub.js';
+import { InMemoryMatchmaker } from './matchmaker.js';
+import { RedisMatchmaker } from './redis-matchmaker.js';
+import { RedisPeerBus } from './peer-bus.js';
+import { createRedisClient, type RedisClient } from './redis.js';
 
 const HEARTBEAT_INTERVAL_MS = 30_000;
 
@@ -14,8 +18,24 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
  * else is upgraded to a socket — but only for allowed origins presenting a
  * valid session token (`?token=`, minted by the API).
  */
-export function createSignalingServer(): { start: () => void; stop: () => Promise<void> } {
-  const hub = new Hub(env.SIGNALING_MAX_QUEUE);
+export function createSignalingServer(): { start: () => Promise<void>; stop: () => Promise<void> } {
+  // With REDIS_URL the matchmaking pool and peer relays are shared across
+  // every instance pointed at the same Redis; without it everything stays
+  // in-process. Pub/sub needs its own connection, hence the duplicate.
+  const redisClients: RedisClient[] = [];
+  let hub: Hub;
+  if (env.redisUrl) {
+    const commands = createRedisClient(env.redisUrl);
+    const subscriber = commands.duplicate();
+    subscriber.on('error', (err) => logger.error({ err }, 'redis subscriber error'));
+    redisClients.push(commands, subscriber);
+    hub = new Hub({
+      matchmaker: new RedisMatchmaker(commands, { maxWaiting: env.SIGNALING_MAX_QUEUE }),
+      bus: new RedisPeerBus(commands, subscriber),
+    });
+  } else {
+    hub = new Hub({ matchmaker: new InMemoryMatchmaker(env.SIGNALING_MAX_QUEUE) });
+  }
   observeHub(hub);
 
   const httpServer = createServer((req, res) => {
@@ -75,19 +95,21 @@ export function createSignalingServer(): { start: () => void; stop: () => Promis
   heartbeat.unref();
 
   return {
-    start() {
+    async start() {
+      await Promise.all(redisClients.map((client) => client.connect()));
       httpServer.listen(env.SIGNALING_PORT, env.SIGNALING_HOST, () => {
         logger.info(
-          { host: env.SIGNALING_HOST, port: env.SIGNALING_PORT },
+          { host: env.SIGNALING_HOST, port: env.SIGNALING_PORT, redis: Boolean(env.redisUrl) },
           'signaling server listening',
         );
       });
     },
-    stop() {
+    async stop() {
       clearInterval(heartbeat);
-      return new Promise<void>((resolve) => {
+      await new Promise<void>((resolve) => {
         wss.close(() => httpServer.close(() => resolve()));
       });
+      await Promise.all(redisClients.map((client) => client.close()));
     },
   };
 }

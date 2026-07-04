@@ -110,6 +110,8 @@ services:
     environment:
       NODE_ENV: production
       DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+      # Shared matchmaking pool + cross-instance signal relay.
+      REDIS_URL: redis://redis:6379
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?generate with `openssl rand -hex 32`}
       SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://cougny.com}
       SIGNALING_MAX_QUEUE: ${SIGNALING_MAX_QUEUE:-10000}
@@ -121,6 +123,8 @@ services:
       start_period: 10s
     depends_on:
       postgres:
+        condition: service_healthy
+      redis:
         condition: service_healthy
 
   # ---- data stores (internal network only — no published ports) ---------------

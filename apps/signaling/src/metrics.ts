@@ -42,7 +42,10 @@ export const rejectedHandshakesTotal = new Counter({
 });
 
 /** Register gauges that read live hub state at scrape time. */
-export function observeHub(hub: { connectionCount: number; queueSize: number }): void {
+export function observeHub(hub: {
+  connectionCount: number;
+  queueSize: () => Promise<number>;
+}): void {
   new Gauge({
     name: 'cougny_signaling_connections',
     help: 'Currently open WebSocket connections.',
@@ -54,10 +57,10 @@ export function observeHub(hub: { connectionCount: number; queueSize: number }):
 
   new Gauge({
     name: 'cougny_signaling_queue_size',
-    help: 'Peers currently waiting in the matchmaking queue.',
+    help: 'Peers waiting in the matchmaking queue (shared across instances when Redis-backed).',
     registers: [registry],
-    collect(): void {
-      this.set(hub.queueSize);
+    async collect(): Promise<void> {
+      this.set(await hub.queueSize());
     },
   });
 }
