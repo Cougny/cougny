@@ -129,7 +129,7 @@ export default function HomePage(): React.ReactElement {
           )}
 
           {/* COUGNY watermark — top-left of self view. */}
-          <span className="pointer-events-none absolute left-3 top-3 font-display text-3xl text-white/30 select-none">
+          <span className="pointer-events-none absolute left-3 top-3 z-10 font-display text-3xl text-neutral-400/50 select-none">
             COUGNY
           </span>
         </VideoPanel>
@@ -197,7 +197,7 @@ export default function HomePage(): React.ReactElement {
       )}
 
       {/* Bottom: exactly 35% of screen. */}
-      <div className="overflow-visible border-t border-neutral-200/50 bg-white dark:border-neutral-800 dark:bg-neutral-950">
+      <div className="overflow-visible border-t border-neutral-200/50 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950">
         <MatchControls
           status={call.status}
           onStart={call.start}
