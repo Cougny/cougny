@@ -1,5 +1,13 @@
 @import 'tailwindcss';
 
+@font-face {
+  font-family: 'TanBuster';
+  src: url('/fonts/tan-buster.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
 /*
  * Dark mode is class-based: the inline script in the root layout adds `.dark`
  * to <html> before paint, and `dark:` utilities key off it instead of the
@@ -18,6 +26,7 @@
   --color-brand-accent: #c026d3;
   --color-brand-fg: #ffffff;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
+  --font-display: 'TanBuster', ui-serif, Georgia, serif;
 }
 
 :root {

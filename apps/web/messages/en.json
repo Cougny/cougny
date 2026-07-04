@@ -53,6 +53,7 @@
     "chatTyping": "Stranger is typing…",
     "micOffBadge": "Microphone off",
     "cameraOffNote": "Your camera is off",
+    "remoteCameraOff": "Stranger's camera is off",
     "permissionDenied": "Camera and microphone access is required to start a call.",
     "permissionRetry": "Grant access and try again",
     "errorGeneric": "Something went wrong. Please try again.",
