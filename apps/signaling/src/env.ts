@@ -16,6 +16,12 @@ const EnvSchema = z.object({
   DATABASE_URL: z.string().min(1),
   /** Upper bound on peers simultaneously waiting to be matched (backpressure). */
   SIGNALING_MAX_QUEUE: z.coerce.number().int().positive().default(10_000),
+  /**
+   * Optional Redis connection string. When set, all signaling instances
+   * pointed at the same Redis share one matchmaking pool and relay signals
+   * across instances; when unset, matchmaking is in-process (single instance).
+   */
+  REDIS_URL: z.string().optional(),
 });
 
 const parsed = EnvSchema.safeParse(process.env);
@@ -29,4 +35,6 @@ export const env = {
   allowedOrigins: parsed.data.SIGNALING_ALLOWED_ORIGINS.split(',')
     .map((origin) => origin.trim())
     .filter(Boolean),
+  /** Normalized `REDIS_URL`: an empty value (commented-out template) means disabled. */
+  redisUrl: parsed.data.REDIS_URL?.trim() || null,
 };

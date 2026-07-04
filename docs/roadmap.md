@@ -5,12 +5,15 @@ This tracks what's deliberately deferred and where it plugs in.
 
 ## Scaling the realtime tier
 
-- **Redis-backed matchmaking.** Replace the in-process
-  [`Matchmaker`](../apps/signaling/src/matchmaker.ts) with a Redis ZSET queue so
-  multiple signaling instances share one pool. The `Hub` interface stays the
-  same.
-- **Cross-instance signal fan-out.** Use Redis pub/sub so two peers matched on
-  different signaling instances can still relay to each other.
+- ~~**Redis-backed matchmaking.**~~ Done: with `REDIS_URL` set, all signaling
+  instances share one pool through
+  [`RedisMatchmaker`](../apps/signaling/src/redis-matchmaker.ts) — an atomic
+  match-or-enqueue Lua script over a ZSET, behaviorally locked to the
+  in-process implementation by a shared contract test.
+- ~~**Cross-instance signal fan-out.**~~ Done: peers matched on different
+  instances relay `matched`/`signal`/`peer.left` over Redis pub/sub
+  ([`peer-bus.ts`](../apps/signaling/src/peer-bus.ts)); a publish that reaches
+  zero receivers doubles as dead-instance detection.
 - **Sticky vs. stateless sockets.** Decide load-balancer strategy once signaling
   is horizontally scaled.
 

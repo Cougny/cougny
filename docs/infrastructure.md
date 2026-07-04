@@ -12,11 +12,11 @@ Compose reads the repo-root `.env`, so credentials stay in one place.
 
 ## Services
 
-| Service  | Image                      | Port(s)                           | Purpose                                                           |
-| -------- | -------------------------- | --------------------------------- | ----------------------------------------------------------------- |
-| postgres | `postgres:18-alpine`       | 5432                              | Sessions, calls, reports. Volume `pgdata`.                        |
-| redis    | `redis:8-alpine`           | 6379                              | Provisioned for presence/rate-limiting/scale-out (not yet wired). |
-| coturn   | `coturn/coturn:4.6-alpine` | 3478 (tcp/udp), 49160–49200 (udp) | STUN/TURN for NAT traversal.                                      |
+| Service  | Image                      | Port(s)                           | Purpose                                                              |
+| -------- | -------------------------- | --------------------------------- | -------------------------------------------------------------------- |
+| postgres | `postgres:18-alpine`       | 5432                              | Sessions, calls, reports. Volume `pgdata`.                           |
+| redis    | `redis:8-alpine`           | 6379                              | Shared matchmaking pool + cross-instance signaling, API rate limits. |
+| coturn   | `coturn/coturn:4.6-alpine` | 3478 (tcp/udp), 49160–49200 (udp) | STUN/TURN for NAT traversal.                                         |
 
 ### Postgres
 
@@ -27,9 +27,11 @@ volume; `docker compose down -v` wipes it.
 ### Redis
 
 Started with persistence disabled (`--save '' --appendonly no`) — it's a cache/
-coordination layer, not a system of record. See [roadmap.md](./roadmap.md) for
-what will use it (Redis-backed matchmaking, rate limiting, cross-instance
-signaling fan-out).
+coordination layer, not a system of record. When `REDIS_URL` is set, the API
+shares rate-limit counters across instances and the signaling tier shares one
+matchmaking pool and relays signals across instances (see
+[apps/signaling.md](./apps/signaling.md)); with it unset both fall back to
+in-process state, which is correct for a single instance.
 
 ### <a id="coturn"></a>coturn
 
@@ -58,7 +60,7 @@ The API mints matching HMAC credentials — see
 | Variable                    | postgres | redis | coturn | api | signaling | web |
 | --------------------------- | :------: | :---: | :----: | :-: | :-------: | :-: |
 | `DATABASE_URL`              |          |       |        |  ✓  |           |     |
-| `REDIS_URL`                 |          |   ✓   |        |     |           |     |
+| `REDIS_URL`                 |          |   ✓   |        |  ✓  |     ✓     |     |
 | `AUTH_JWT_SECRET`           |          |       |        |  ✓  |           |     |
 | `TURN_STATIC_AUTH_SECRET`   |          |       |   ✓    |  ✓  |           |     |
 | `STUN_URL` / `TURN_URL`     |          |       |        |  ✓  |           |     |
