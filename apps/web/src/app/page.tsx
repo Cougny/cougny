@@ -8,6 +8,7 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { WelcomeDialog, useWelcomeAccepted } from '@/components/WelcomeDialog';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -30,6 +31,7 @@ export default function HomePage(): React.ReactElement {
   const [reportTarget, setReportTarget] = useState<{ roomId: string; peerId: string } | null>(null);
   const [reportThanks, setReportThanks] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
+  const [welcomeAccepted, setWelcomeAccepted] = useState(useWelcomeAccepted());
 
   useEffect(() => {
     if (!reportThanks) return;
@@ -83,6 +85,8 @@ export default function HomePage(): React.ReactElement {
 
   return (
     <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
+      {!welcomeAccepted && <WelcomeDialog onAccept={() => setWelcomeAccepted(true)} />}
+
       {/* Video stage: fills remaining space. */}
       <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
         <VideoPanel label={t('you')}>
