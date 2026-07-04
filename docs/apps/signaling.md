@@ -38,9 +38,11 @@ src/
 
 ## How it works
 
-- **`server.ts`** gates every upgrade at the handshake: the Origin must be on
-  the allowlist **and** `?token=` must be a session JWT minted by the API
-  (verified locally via the shared `AUTH_JWT_SECRET`). It serves `GET /healthz`
+- **`server.ts`** gates every upgrade at the handshake: the upgrade must target
+  the versioned protocol path (`/v1`, derived from `PROTOCOL_VERSION` in
+  `@cougny/protocol`), the Origin must be on the allowlist, **and** `?token=`
+  must be a session JWT minted by the API (verified locally via the shared
+  `AUTH_JWT_SECRET`). It serves `GET /healthz`
   for probes and `GET /metrics` for Prometheus, and runs a ping/pong
   **heartbeat** that terminates dead sockets so abandoned rooms don't leak.
 - **`Hub`** ([`hub.ts`](../../apps/signaling/src/hub.ts)) registers each

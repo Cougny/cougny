@@ -1,3 +1,4 @@
+import { readFileSync } from 'node:fs';
 import Fastify, { type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
@@ -15,6 +16,18 @@ import { registerHealthRoutes } from './routes/health.js';
 import { registerSessionRoutes } from './routes/session.js';
 import { registerIceRoutes } from './routes/ice.js';
 import { registerReportRoutes } from './routes/reports.js';
+
+/**
+ * Version advertised in the OpenAPI document. Read from this service's
+ * package.json so the published spec always matches the deployed build rather
+ * than drifting from a hardcoded literal. The relative path resolves the same
+ * from `src/app.ts` and the compiled `dist/app.js`.
+ */
+const API_VERSION = (
+  JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')) as {
+    version: string;
+  }
+).version;
 
 /**
  * Builds the Fastify instance with all plugins and routes registered but not
@@ -93,7 +106,7 @@ export async function buildApp(): Promise<FastifyInstance> {
         title: 'Cougny API',
         description:
           'HTTP API for Cougny: anonymous sessions, WebRTC ICE credentials, and moderation reports.',
-        version: '0.1.0',
+        version: API_VERSION,
       },
       servers: [{ url: `http://localhost:${env.API_PORT}`, description: 'Local development' }],
       components: {
