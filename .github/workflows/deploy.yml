@@ -98,9 +98,11 @@ jobs:
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml --profile tools pull --quiet
           # Migrations first, so new containers never meet an old schema.
-          # (`run` has no --no-build flag; the image was just pulled, so
-          # compose uses it as-is.)
-          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm db-migrate
+          # </dev/null is load-bearing: this script arrives via bash's stdin,
+          # and `compose run` attaches the container to that same stdin — the
+          # container would otherwise consume the rest of the script and the
+          # `up -d` below would silently never execute.
+          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm db-migrate </dev/null
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
           docker image prune -f
           docker logout ghcr.io
