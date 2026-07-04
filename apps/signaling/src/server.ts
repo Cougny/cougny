@@ -1,5 +1,6 @@
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { WebSocketServer, type WebSocket } from 'ws';
+import { SIGNALING_PATH } from '@cougny/protocol';
 import { env } from './env.js';
 import { logger } from './logger.js';
 import { verifySessionToken } from './auth.js';
@@ -14,9 +15,9 @@ const HEARTBEAT_INTERVAL_MS = 30_000;
 
 /**
  * Boots the signaling HTTP+WebSocket server. The HTTP layer answers `/healthz`
- * for load-balancer probes and `/metrics` for Prometheus scrapes; everything
- * else is upgraded to a socket — but only for allowed origins presenting a
- * valid session token (`?token=`, minted by the API).
+ * for load-balancer probes and `/metrics` for Prometheus scrapes; upgrades are
+ * accepted only on the versioned protocol path (`/v1`), from allowed origins
+ * presenting a valid session token (`?token=`, minted by the API).
  */
 export function createSignalingServer(): { start: () => Promise<void>; stop: () => Promise<void> } {
   // With REDIS_URL the matchmaking pool and peer relays are shared across
@@ -126,7 +127,8 @@ async function serveMetrics(res: ServerResponse): Promise<void> {
 }
 
 /**
- * Handshake gate: the Origin must be allowlisted (browsers enforce nothing on
+ * Handshake gate: the upgrade must target the versioned protocol path
+ * (`/v1`), the Origin must be allowlisted (browsers enforce nothing on
  * WebSockets, so this is the CSRF line) and the `?token=` must be a session
  * token signed by the API. On success the resolved session id is stashed for
  * the connection handler.
@@ -136,6 +138,15 @@ function verifyHandshake(
   handshakeSessions: WeakMap<IncomingMessage, string>,
 ): boolean {
   const { origin, req } = info;
+  const url = new URL(req.url ?? '/', 'http://placeholder');
+
+  // Reject clients speaking a different (or no) protocol version outright,
+  // rather than letting them fail confusingly mid-call.
+  if (url.pathname !== SIGNALING_PATH) {
+    rejectedHandshakesTotal.inc({ reason: 'version' });
+    logger.warn({ origin, path: url.pathname }, 'rejected socket on unsupported protocol path');
+    return false;
+  }
 
   // Native/non-browser clients send no Origin header; allow them (no CSRF
   // risk) — they still need a valid token below.
@@ -145,7 +156,7 @@ function verifyHandshake(
     return false;
   }
 
-  const token = new URL(req.url ?? '/', 'http://placeholder').searchParams.get('token');
+  const token = url.searchParams.get('token');
   const sessionId = verifySessionToken(token);
   if (!sessionId) {
     rejectedHandshakesTotal.inc({ reason: 'token' });

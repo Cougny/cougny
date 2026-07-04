@@ -23,7 +23,7 @@ what exists today and what is deliberately still open.
   (`verifyClient`) reject browser origins outside `SIGNALING_ALLOWED_ORIGINS`.
 - **Bearer auth.** ICE credentials and reports require a valid session token, so
   TURN credentials aren't handed to anonymous scrapers. The **signaling socket
-  requires the same token at the handshake** (`?token=`), verified against the
+  requires the same token at the handshake** (`/v1?token=`), verified against the
   shared `AUTH_JWT_SECRET` — unauthenticated upgrades are rejected before a
   connection exists.
 - **Rate limiting.** The API throttles per IP globally, with tighter per-route
