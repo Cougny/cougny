@@ -85,7 +85,7 @@ export default function HomePage(): React.ReactElement {
     <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
       {/* Video stage: fills remaining space. */}
       <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
-        <VideoPanel label={t('you')} muted={!call.micEnabled} mutedLabel={t('micOffBadge')}>
+        <VideoPanel label={t('you')}>
           {call.localStream && call.cameraEnabled ? (
             <VideoView
               stream={call.localStream}
@@ -123,16 +123,40 @@ export default function HomePage(): React.ReactElement {
               />
             </div>
           )}
+
+          {/* COUGNY watermark — top-left of self view. */}
+          <span className="pointer-events-none absolute left-3 top-3 font-display text-3xl text-white/30 select-none">
+            COUGNY
+          </span>
         </VideoPanel>
 
         <VideoPanel label={t('stranger')} live={call.status === 'connected'}>
-          {call.remoteStream ? (
-            <VideoView stream={call.remoteStream} className="h-full w-full object-cover" />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              {renderStrangerOverlay()}
-            </div>
-          )}
+          {(() => {
+            const videoTracks = call.remoteStream?.getVideoTracks() ?? [];
+            const hasLiveVideo = videoTracks.some((t) => t.readyState === 'live');
+            if (call.remoteStream && hasLiveVideo) {
+              return (
+                <VideoView stream={call.remoteStream} className="h-full w-full object-cover" />
+              );
+            }
+            if (call.remoteStream && !hasLiveVideo) {
+              return (
+                <div className="flex h-full w-full items-center justify-center">
+                  <div className="flex flex-col items-center gap-3 px-6 text-center">
+                    <CameraOffIcon className="h-10 w-10 text-neutral-400 dark:text-neutral-500" />
+                    <p className="text-base text-neutral-500 dark:text-neutral-400">
+                      {t('remoteCameraOff')}
+                    </p>
+                  </div>
+                </div>
+              );
+            }
+            return (
+              <div className="flex h-full w-full items-center justify-center">
+                {renderStrangerOverlay()}
+              </div>
+            );
+          })()}
 
           {call.status === 'connected' && call.roomId && call.peerId && (
             <button
@@ -307,35 +331,21 @@ function MediaToggle({
 function VideoPanel({
   label,
   live = false,
-  muted = false,
-  mutedLabel,
   children,
 }: {
   label: string;
   live?: boolean;
-  muted?: boolean;
-  mutedLabel?: string;
   children: React.ReactNode;
 }): React.ReactElement {
   return (
     <div className="relative flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       {children}
 
-      {/* Chips stay dark in both themes so they read over live video. */}
-      <span className="absolute left-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+      {/* Label chip at bottom-left. */}
+      <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1 text-xs font-medium text-white backdrop-blur">
         {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
         {label}
       </span>
-
-      {muted && (
-        <span
-          title={mutedLabel}
-          className="absolute right-3 top-3 flex h-7 w-7 items-center justify-center rounded-full bg-red-600/90 text-white backdrop-blur"
-        >
-          <MicOffIcon className="h-3.5 w-3.5" />
-          {mutedLabel && <span className="sr-only">{mutedLabel}</span>}
-        </span>
-      )}
     </div>
   );
 }
