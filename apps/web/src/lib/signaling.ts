@@ -1,4 +1,9 @@
-import { parseServerMessage, type ClientMessage, type ServerMessage } from '@cougny/protocol';
+import {
+  SIGNALING_PATH,
+  parseServerMessage,
+  type ClientMessage,
+  type ServerMessage,
+} from '@cougny/protocol';
 import { clientEnv } from './env';
 
 type MessageHandler = (message: ServerMessage) => void;
@@ -14,7 +19,7 @@ export class SignalingClient {
 
   connect(token: string): Promise<void> {
     return new Promise((resolve, reject) => {
-      const url = `${clientEnv.signalingUrl}/?token=${encodeURIComponent(token)}`;
+      const url = `${clientEnv.signalingUrl}${SIGNALING_PATH}?token=${encodeURIComponent(token)}`;
       const socket = new WebSocket(url);
       this.socket = socket;
 
