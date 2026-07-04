@@ -104,6 +104,11 @@ jobs:
           # `up -d` below would silently never execute.
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm db-migrate </dev/null
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
-          docker image prune -f
+          # -a, not just dangling: every deploy pulls a fresh set of
+          # commit-SHA-tagged images, and the old tags are not dangling, so a
+          # plain prune leaves them to accumulate until the disk fills. After
+          # `up -d` the running containers pin the images still in use, so -a
+          # reclaims exactly the superseded ones.
+          docker image prune -a -f
           docker logout ghcr.io
           SCRIPT
