@@ -55,7 +55,12 @@
     "cameraOffNote": "Your camera is off",
     "permissionDenied": "Camera and microphone access is required to start a call.",
     "permissionRetry": "Grant access and try again",
-    "errorGeneric": "Something went wrong. Please try again."
+    "errorGeneric": "Something went wrong. Please try again.",
+    "countryLabel": "Country",
+    "comingSoon": "Coming soon",
+    "chatToggle": "Open chat",
+    "chatClose": "Close chat",
+    "chat": "Chat"
   },
   "report": {
     "title": "Report this person",

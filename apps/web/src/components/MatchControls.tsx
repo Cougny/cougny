@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useEffect, useMemo, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
 import type { GenderPreference, MatchPreferences } from '@cougny/protocol';
 import type { CallStatus } from '@/hooks/useRandomCall';
@@ -75,165 +75,88 @@ export function MatchControls({
     window.dispatchEvent(new Event(PREFS_CHANGE_EVENT));
   };
 
-  const [openPicker, setOpenPicker] = useState<'gender' | null>(null);
-
   const idle = status === 'idle' || status === 'error';
 
   return (
-    <div className="grid h-full grid-cols-3 gap-2 p-3">
-      {idle ? (
-        <button
-          onClick={onStart}
-          className="flex flex-col items-center justify-center gap-1 rounded-xl bg-gradient-to-br from-brand to-brand-accent text-sm font-bold uppercase tracking-wider text-brand-fg shadow-lg shadow-brand/25 transition hover:scale-[1.02] hover:opacity-90 active:scale-[0.98]"
-        >
-          {t('start')}
-        </button>
-      ) : (
-        <button
-          onClick={onStop}
-          className="flex flex-col items-center justify-center gap-1 rounded-xl bg-red-600 text-sm font-bold uppercase tracking-wider text-white transition hover:scale-[1.02] hover:bg-red-500 active:scale-[0.98]"
-        >
-          <StopIcon className="h-5 w-5" />
-          {t('stop')}
-        </button>
-      )}
-
-      <button
-        onClick={onSkip}
-        disabled={idle}
-        className="flex flex-col items-center justify-center gap-1 rounded-xl border border-brand/30 bg-brand/10 text-sm font-bold uppercase tracking-wider text-brand transition hover:scale-[1.02] hover:bg-brand/20 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand/50 dark:bg-brand/20 dark:text-violet-200 dark:hover:bg-brand/30"
-      >
-        <NextIcon className="h-5 w-5" />
-        {t('skip')}
-      </button>
-
-      <PickerBlock
-        label={t('genderLabel')}
-        value={prefs.gender}
-        open={openPicker === 'gender'}
-        onToggle={() => setOpenPicker(openPicker === 'gender' ? null : 'gender')}
-        onSelect={(gender) => {
-          setPrefs({ gender: gender as GenderPreference });
-          setOpenPicker(null);
-        }}
-        options={[
-          { value: 'any', label: t('anyOption') },
-          { value: 'male', label: t('genderMale') },
-          { value: 'female', label: t('genderFemale') },
-        ]}
-      />
-    </div>
-  );
-}
-
-interface PickerOption {
-  value: string;
-  label: string;
-}
-
-function PickerBlock({
-  label,
-  value,
-  options,
-  open,
-  onToggle,
-  onSelect,
-}: {
-  label: string;
-  value: string;
-  options: PickerOption[];
-  open: boolean;
-  onToggle: () => void;
-  onSelect: (value: string) => void;
-}): React.ReactElement {
-  const selected = options.find((option) => option.value === value) ?? options[0];
-
-  // Close with Escape while the popup is open.
-  useEffect(() => {
-    if (!open) return;
-    const onKeyDown = (event: KeyboardEvent): void => {
-      if (event.key === 'Escape') onToggle();
-    };
-    window.addEventListener('keydown', onKeyDown);
-    return () => window.removeEventListener('keydown', onKeyDown);
-  }, [open, onToggle]);
-
-  return (
-    <div className="relative min-w-0">
-      <button
-        onClick={onToggle}
-        aria-haspopup="listbox"
-        aria-expanded={open}
-        className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-xl border bg-white px-3 transition hover:border-neutral-300 dark:bg-neutral-900 dark:hover:border-neutral-600 ${
-          open ? 'border-brand dark:border-brand' : 'border-neutral-200 dark:border-neutral-800'
-        }`}
-      >
-        <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
-          {label}
-        </span>
-        <span className="flex max-w-full items-center gap-1 text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-          <span className="truncate">{selected?.label}</span>
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            aria-hidden
-            className={`h-3.5 w-3.5 shrink-0 text-neutral-400 transition-transform dark:text-neutral-500 ${open ? 'rotate-180' : ''}`}
+    <div className="flex h-full items-center justify-center p-2 sm:p-3.5">
+      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">
+        {idle ? (
+          <button
+            onClick={onStart}
+            className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-xs font-bold uppercase tracking-wider text-white shadow-[0_6px_16px_rgba(16,185,129,0.35)] transition hover:scale-[1.02] hover:opacity-90 active:scale-[0.98] sm:text-sm"
           >
-            <polyline points="6 9 12 15 18 9" />
-          </svg>
-        </span>
-      </button>
-
-      {open && (
-        <>
-          {/* Click-away backdrop. */}
-          <div className="fixed inset-0 z-40" onClick={onToggle} />
-
-          <ul
-            role="listbox"
-            aria-label={label}
-            className="absolute bottom-full left-1/2 z-50 mb-2 max-h-72 w-56 -translate-x-1/2 overflow-y-auto rounded-xl border border-neutral-200 bg-white p-1 shadow-2xl dark:border-neutral-700 dark:bg-neutral-900"
+            {t('start')}
+          </button>
+        ) : (
+          <button
+            onClick={onStop}
+            className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl bg-red-600 text-xs font-bold uppercase tracking-wider text-white shadow-[0_6px_16px_rgba(220,38,38,0.35)] transition hover:scale-[1.02] hover:bg-red-500 active:scale-[0.98] sm:text-sm"
           >
-            {options.map((option) => {
-              const isSelected = option.value === value;
-              return (
-                <li key={option.value}>
-                  <button
-                    role="option"
-                    aria-selected={isSelected}
-                    onClick={() => onSelect(option.value)}
-                    className={`flex w-full items-center justify-between gap-2 rounded-lg px-3 py-2 text-left text-sm transition ${
-                      isSelected
-                        ? 'bg-brand/10 font-semibold text-brand dark:bg-brand/20 dark:text-violet-200'
-                        : 'text-neutral-700 hover:bg-neutral-100 dark:text-neutral-200 dark:hover:bg-neutral-800'
-                    }`}
-                  >
-                    <span className="truncate">{option.label}</span>
-                    {isSelected && (
-                      <svg
-                        viewBox="0 0 24 24"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={2.5}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        aria-hidden
-                        className="h-4 w-4 shrink-0 text-brand"
-                      >
-                        <polyline points="20 6 9 17 4 12" />
-                      </svg>
-                    )}
-                  </button>
-                </li>
-              );
-            })}
-          </ul>
-        </>
-      )}
+            <StopIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+            {t('stop')}
+          </button>
+        )}
+
+        <button
+          onClick={onSkip}
+          disabled={idle}
+          className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl border border-blue-200 bg-blue-50 text-xs font-bold uppercase tracking-wider text-brand shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition hover:scale-[1.02] hover:bg-blue-100 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand/40 dark:bg-brand/10 dark:text-violet-200 dark:hover:bg-brand/20 sm:text-sm"
+        >
+          <NextIcon className="h-4 w-4 sm:h-5 sm:w-5" />
+          {t('skip')}
+        </button>
+
+        <button
+          disabled
+          className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-blue-200 bg-blue-50/70 text-xs font-bold uppercase tracking-wider text-neutral-400 shadow-[0_4px_12px_rgba(0,0,0,0.04)] dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-600 sm:text-sm"
+        >
+          <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
+            {t('countryLabel')}
+          </span>
+          <span className="text-[10px] text-neutral-400 dark:text-neutral-600">
+            {t('comingSoon')}
+          </span>
+        </button>
+
+        <button
+          onClick={() => {
+            const options: GenderPreference[] = ['any', 'male', 'female'];
+            const idx = options.indexOf(prefs.gender as GenderPreference);
+            const next = options[(idx + 1) % options.length];
+            setPrefs({ gender: next });
+          }}
+          className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border px-1 transition ${
+            prefs.gender === 'male'
+              ? 'border-blue-300 bg-gradient-to-br from-blue-400 to-indigo-500 text-white shadow-lg shadow-blue-400/25 dark:border-blue-600 dark:from-blue-600 dark:to-indigo-700'
+              : prefs.gender === 'female'
+                ? 'border-pink-300 bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-lg shadow-pink-400/25 dark:border-pink-600 dark:from-pink-600 dark:to-rose-700'
+                : 'border-blue-200 bg-blue-50 shadow-[0_4px_12px_rgba(0,0,0,0.04)] dark:border-neutral-800 dark:bg-neutral-900'
+          }`}
+        >
+          <span
+            className={`text-[10px] font-bold uppercase tracking-wider ${
+              prefs.gender === 'male' || prefs.gender === 'female'
+                ? 'text-white/70'
+                : 'text-neutral-400 dark:text-neutral-500'
+            }`}
+          >
+            {t('genderLabel')}
+          </span>
+          <span
+            className={`text-sm font-semibold ${
+              prefs.gender === 'male' || prefs.gender === 'female'
+                ? 'text-white'
+                : 'text-neutral-900 dark:text-neutral-100'
+            }`}
+          >
+            {prefs.gender === 'male'
+              ? t('genderMale')
+              : prefs.gender === 'female'
+                ? t('genderFemale')
+                : t('anyOption')}
+          </span>
+        </button>
+      </div>
     </div>
   );
 }
