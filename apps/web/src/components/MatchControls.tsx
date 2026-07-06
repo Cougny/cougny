@@ -130,7 +130,7 @@ export function MatchControls({
               ? 'border-blue-400 bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/25 dark:border-blue-600 dark:from-blue-600 dark:to-indigo-700'
               : prefs.gender === 'female'
                 ? 'border-pink-400 bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-md shadow-pink-500/20 hover:shadow-lg hover:shadow-pink-500/25 dark:border-pink-600 dark:from-pink-600 dark:to-rose-700'
-                : 'border-neutral-200 bg-white text-neutral-700 shadow-sm hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-neutral-700'
+                : 'border-neutral-200 bg-neutral-50 text-neutral-600 shadow-sm hover:border-neutral-300 hover:bg-neutral-100 hover:text-neutral-800 dark:border-neutral-800 dark:bg-neutral-900/70 dark:text-neutral-300 dark:hover:border-neutral-700 dark:hover:bg-neutral-900'
           }`}
         >
           <span
