@@ -37,7 +37,7 @@
     "knip": "^6.24.0",
     "lint-staged": "^17.0.8",
     "prettier": "^3.9.4",
-    "turbo": "^2.10.2",
+    "turbo": "^2.10.3",
     "typescript": "^6.0.3"
   },
   "lint-staged": {
