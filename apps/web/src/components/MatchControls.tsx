@@ -79,18 +79,18 @@ export function MatchControls({
 
   return (
     <div className="flex h-full items-center justify-center p-2 sm:p-3.5">
-      <div className="grid w-full grid-cols-2 gap-3 sm:grid-cols-4 sm:gap-5">
+      <div className="grid w-full grid-cols-2 gap-2.5 sm:grid-cols-4 sm:gap-4">
         {idle ? (
           <button
             onClick={onStart}
-            className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 text-xs font-bold uppercase tracking-wider text-white shadow-[0_6px_16px_rgba(16,185,129,0.35)] transition hover:scale-[1.02] hover:opacity-90 active:scale-[0.98] sm:text-sm"
+            className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-emerald-500/20 transition hover:scale-[1.02] hover:shadow-lg hover:shadow-emerald-500/25 active:scale-[0.98] sm:text-sm"
           >
             {t('start')}
           </button>
         ) : (
           <button
             onClick={onStop}
-            className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl bg-red-600 text-xs font-bold uppercase tracking-wider text-white shadow-[0_6px_16px_rgba(220,38,38,0.35)] transition hover:scale-[1.02] hover:bg-red-500 active:scale-[0.98] sm:text-sm"
+            className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl bg-red-500 text-xs font-bold uppercase tracking-wider text-white shadow-md shadow-red-500/20 transition hover:scale-[1.02] hover:bg-red-400 hover:shadow-lg hover:shadow-red-500/25 active:scale-[0.98] sm:text-sm"
           >
             <StopIcon className="h-4 w-4 sm:h-5 sm:w-5" />
             {t('stop')}
@@ -100,7 +100,7 @@ export function MatchControls({
         <button
           onClick={onSkip}
           disabled={idle}
-          className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl border border-blue-200 bg-blue-50 text-xs font-bold uppercase tracking-wider text-brand shadow-[0_4px_12px_rgba(0,0,0,0.06)] transition hover:scale-[1.02] hover:bg-blue-100 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-brand/40 dark:bg-brand/10 dark:text-violet-200 dark:hover:bg-brand/20 sm:text-sm"
+          className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl border border-violet-200 bg-violet-50 text-xs font-bold uppercase tracking-wider text-violet-600 shadow-sm transition hover:scale-[1.02] hover:border-violet-300 hover:bg-violet-100 hover:text-violet-700 active:scale-[0.98] disabled:scale-100 disabled:cursor-not-allowed disabled:opacity-40 dark:border-violet-800 dark:bg-violet-950/50 dark:text-violet-300 dark:hover:bg-violet-950 sm:text-sm"
         >
           <NextIcon className="h-4 w-4 sm:h-5 sm:w-5" />
           {t('skip')}
@@ -108,7 +108,7 @@ export function MatchControls({
 
         <button
           disabled
-          className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-blue-200 bg-blue-50/70 text-xs font-bold uppercase tracking-wider text-neutral-400 shadow-[0_4px_12px_rgba(0,0,0,0.04)] dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-600 sm:text-sm"
+          className="aspect-[3/2] flex flex-col items-center justify-center gap-1 rounded-2xl border border-dashed border-neutral-200 bg-neutral-50/70 text-xs font-bold uppercase tracking-wider text-neutral-400 shadow-sm dark:border-neutral-800 dark:bg-neutral-900/50 dark:text-neutral-600 sm:text-sm"
         >
           <span className="text-[10px] font-bold uppercase tracking-wider text-neutral-400 dark:text-neutral-500">
             {t('countryLabel')}
@@ -125,12 +125,12 @@ export function MatchControls({
             const next = options[(idx + 1) % options.length];
             setPrefs({ gender: next });
           }}
-          className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border px-1 transition ${
+          className={`flex h-full w-full flex-col items-center justify-center gap-1 rounded-2xl border px-1 transition hover:scale-[1.02] active:scale-[0.98] ${
             prefs.gender === 'male'
-              ? 'border-blue-300 bg-gradient-to-br from-blue-400 to-indigo-500 text-white shadow-lg shadow-blue-400/25 dark:border-blue-600 dark:from-blue-600 dark:to-indigo-700'
+              ? 'border-blue-400 bg-gradient-to-br from-blue-500 to-indigo-600 text-white shadow-md shadow-blue-500/20 hover:shadow-lg hover:shadow-blue-500/25 dark:border-blue-600 dark:from-blue-600 dark:to-indigo-700'
               : prefs.gender === 'female'
-                ? 'border-pink-300 bg-gradient-to-br from-pink-400 to-rose-500 text-white shadow-lg shadow-pink-400/25 dark:border-pink-600 dark:from-pink-600 dark:to-rose-700'
-                : 'border-blue-200 bg-blue-50 shadow-[0_4px_12px_rgba(0,0,0,0.04)] dark:border-neutral-800 dark:bg-neutral-900'
+                ? 'border-pink-400 bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-md shadow-pink-500/20 hover:shadow-lg hover:shadow-pink-500/25 dark:border-pink-600 dark:from-pink-600 dark:to-rose-700'
+                : 'border-neutral-200 bg-white text-neutral-700 shadow-sm hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-800 dark:bg-neutral-900 dark:text-neutral-300 dark:hover:border-neutral-700'
           }`}
         >
           <span
@@ -146,7 +146,7 @@ export function MatchControls({
             className={`text-sm font-semibold ${
               prefs.gender === 'male' || prefs.gender === 'female'
                 ? 'text-white'
-                : 'text-neutral-900 dark:text-neutral-100'
+                : 'text-neutral-800 dark:text-neutral-200'
             }`}
           >
             {prefs.gender === 'male'

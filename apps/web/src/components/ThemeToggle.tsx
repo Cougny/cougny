@@ -1,23 +1,50 @@
 'use client';
 
-import { useSyncExternalStore } from 'react';
+import { useCallback, useSyncExternalStore } from 'react';
 import { useTranslations } from 'next-intl';
-import { MoonIcon, SunIcon } from '@/components/icons';
+import { MonitorIcon, MoonIcon, SunIcon } from '@/components/icons';
 
 const THEME_STORAGE_KEY = 'cougny.theme';
 
+type ThemeChoice = 'system' | 'light' | 'dark';
+
+function readStored(): ThemeChoice {
+  if (typeof window === 'undefined') return 'system';
+  try {
+    const raw = window.localStorage.getItem(THEME_STORAGE_KEY);
+    if (raw === 'light' || raw === 'dark') return raw;
+  } catch {
+    // Storage unavailable — fall through.
+  }
+  return 'system';
+}
+
+function resolveEffective(): 'light' | 'dark' {
+  if (typeof window === 'undefined') return 'light';
+  const stored = readStored();
+  if (stored === 'light') return 'light';
+  if (stored === 'dark') return 'dark';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
 /*
  * The `dark` class on <html> is the single source of truth (set pre-paint by
- * the root layout's inline script); observing it keeps every toggle instance
+ * the root layout's inline script). Observing it keeps every toggle instance
  * in sync without extra state.
  */
 function subscribeToThemeClass(onChange: () => void): () => void {
   const observer = new MutationObserver(onChange);
   observer.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
-  return () => observer.disconnect();
+  // Also listen for OS theme changes so "system" mode stays live.
+  const mql = window.matchMedia('(prefers-color-scheme: dark)');
+  mql.addEventListener('change', onChange);
+  return () => {
+    observer.disconnect();
+    mql.removeEventListener('change', onChange);
+  };
 }
 
-/** Switches between light (default) and dark, persisting the choice. */
+/** Cycles: system → light → dark → system. Overrides follow the OS when set to system. */
 export function ThemeToggle(): React.ReactElement {
   const t = useTranslations('theme');
 
@@ -27,25 +54,61 @@ export function ThemeToggle(): React.ReactElement {
     () => false,
   );
 
-  const toggle = (): void => {
-    const next = !isDark;
-    document.documentElement.classList.toggle('dark', next);
+  const stored = useSyncExternalStore(
+    subscribeToThemeClass,
+    readStored,
+    () => 'system' as ThemeChoice,
+  );
+
+  const cycle = useCallback((): void => {
+    const next: ThemeChoice =
+      stored === 'system' ? 'light' : stored === 'light' ? 'dark' : 'system';
+
     try {
-      window.localStorage.setItem(THEME_STORAGE_KEY, next ? 'dark' : 'light');
+      if (next === 'system') {
+        window.localStorage.removeItem(THEME_STORAGE_KEY);
+      } else {
+        window.localStorage.setItem(THEME_STORAGE_KEY, next);
+      }
     } catch {
-      // Storage can be unavailable (private mode); the toggle still works for
-      // the current visit.
+      // Storage unavailable — toggle still works for this visit.
     }
-  };
+
+    document.documentElement.classList.toggle(
+      'dark',
+      next === 'dark' ||
+        (next === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches),
+    );
+  }, [stored]);
+
+  const effective = resolveEffective();
 
   return (
     <button
-      onClick={toggle}
-      aria-label={isDark ? t('switchToLight') : t('switchToDark')}
-      title={isDark ? t('switchToLight') : t('switchToDark')}
-      className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-neutral-300 text-neutral-600 shadow-lg transition hover:scale-105 active:scale-95 dark:bg-neutral-700 dark:text-neutral-300"
+      onClick={cycle}
+      aria-label={
+        stored === 'system'
+          ? t('switchToLight')
+          : stored === 'light'
+            ? t('switchToDark')
+            : t('switchToSystem')
+      }
+      title={
+        stored === 'system'
+          ? t('switchToLight')
+          : stored === 'light'
+            ? t('switchToDark')
+            : t('switchToSystem')
+      }
+      className="fixed bottom-20 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full bg-white text-neutral-500 shadow-md ring-1 ring-black/5 transition hover:scale-105 hover:text-neutral-700 hover:shadow-lg active:scale-95 dark:bg-neutral-800 dark:text-neutral-400 dark:ring-white/5 dark:hover:text-neutral-200"
     >
-      {isDark ? <SunIcon className="h-5 w-5" /> : <MoonIcon className="h-5 w-5" />}
+      {stored === 'system' ? (
+        <MonitorIcon className="h-5 w-5" />
+      ) : effective === 'dark' ? (
+        <MoonIcon className="h-5 w-5" />
+      ) : (
+        <SunIcon className="h-5 w-5" />
+      )}
     </button>
   );
 }

@@ -73,7 +73,7 @@ export function ReportDialog({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div
-        className="absolute inset-0 bg-neutral-950/60 backdrop-blur-sm dark:bg-neutral-950/80"
+        className="absolute inset-0 bg-white/60 backdrop-blur-sm dark:bg-neutral-950/80"
         onClick={onClose}
       />
 
@@ -82,11 +82,11 @@ export function ReportDialog({
         aria-modal="true"
         aria-labelledby="report-dialog-title"
         onSubmit={handleSubmit}
-        className="relative w-full max-w-md space-y-4 rounded-2xl border border-neutral-200 bg-white p-6 shadow-2xl dark:border-neutral-800 dark:bg-neutral-900"
+        className="relative w-full max-w-md space-y-4 rounded-2xl border border-neutral-200/60 bg-white p-6 shadow-xl dark:border-neutral-800 dark:bg-neutral-900"
       >
         <h2
           id="report-dialog-title"
-          className="text-lg font-semibold text-neutral-900 dark:text-neutral-100"
+          className="text-lg font-semibold text-neutral-800 dark:text-neutral-100"
         >
           {t('title')}
         </h2>
@@ -97,8 +97,8 @@ export function ReportDialog({
               key={value}
               className={`flex cursor-pointer items-center gap-3 rounded-xl border px-4 py-2.5 text-sm transition ${
                 reason === value
-                  ? 'border-brand bg-brand/10 text-neutral-900 dark:bg-brand/15 dark:text-neutral-100'
-                  : 'border-neutral-200 text-neutral-600 hover:border-neutral-300 dark:border-neutral-800 dark:text-neutral-300 dark:hover:border-neutral-600'
+                  ? 'border-brand/50 bg-brand/5 text-neutral-800 shadow-sm dark:bg-brand/10 dark:text-neutral-100'
+                  : 'border-neutral-200 text-neutral-500 hover:border-neutral-300 hover:bg-neutral-50 dark:border-neutral-800 dark:text-neutral-400 dark:hover:border-neutral-700 dark:hover:bg-neutral-900'
               }`}
             >
               <input
@@ -121,7 +121,7 @@ export function ReportDialog({
           maxLength={DETAILS_MAX_LENGTH}
           rows={3}
           disabled={submitting}
-          className="w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:bg-neutral-950"
+          className="w-full resize-none rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-800 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:bg-neutral-950"
         />
 
         {failed && (
@@ -135,14 +135,14 @@ export function ReportDialog({
             type="button"
             onClick={onClose}
             disabled={submitting}
-            className="rounded-full px-5 py-2 text-sm font-semibold text-neutral-600 transition hover:bg-neutral-100 disabled:opacity-40 dark:text-neutral-300 dark:hover:bg-neutral-800"
+            className="rounded-full px-5 py-2 text-sm font-medium text-neutral-500 transition hover:bg-neutral-100 hover:text-neutral-700 disabled:opacity-40 dark:text-neutral-400 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
           >
             {t('cancel')}
           </button>
           <button
             type="submit"
             disabled={!reason || submitting}
-            className="flex items-center gap-2 rounded-full bg-red-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-red-500 disabled:opacity-40"
+            className="flex items-center gap-2 rounded-full bg-red-500 px-5 py-2 text-sm font-semibold text-white shadow-sm transition hover:bg-red-600 hover:shadow-md disabled:opacity-40 disabled:shadow-none"
           >
             {submitting && <SpinnerIcon className="h-4 w-4 animate-spin" />}
             {t('submit')}

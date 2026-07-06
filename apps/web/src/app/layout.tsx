@@ -13,11 +13,11 @@ export const metadata: Metadata = {
 };
 
 /*
- * Applies the persisted theme before first paint so a dark-mode user never
- * sees a white flash. Light is the default; only an explicit 'dark' choice
- * adds the class.
+ * Applies the theme before first paint:
+ * - A stored 'light' or 'dark' choice overrides the OS.
+ * - Otherwise the OS-level `prefers-color-scheme` is used.
  */
-const THEME_INIT_SCRIPT = `(function(){try{if(localStorage.getItem('cougny.theme')==='dark')document.documentElement.classList.add('dark')}catch(e){}})()`;
+const THEME_INIT_SCRIPT = `(function(){try{var t=localStorage.getItem('cougny.theme');if(t==='dark'||(!t&&window.matchMedia('(prefers-color-scheme:dark)').matches))document.documentElement.classList.add('dark')}catch(e){}})()`;
 
 export default async function RootLayout({
   children,
@@ -32,7 +32,7 @@ export default async function RootLayout({
   return (
     <html lang={locale} className={inter.variable} suppressHydrationWarning>
       <head>
-        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} />
+        <script dangerouslySetInnerHTML={{ __html: THEME_INIT_SCRIPT }} suppressHydrationWarning />
       </head>
       <body className="font-sans">
         <ThemeProvider>

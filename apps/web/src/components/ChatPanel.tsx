@@ -62,10 +62,10 @@ export function ChatPanel({
             className={`flex ${message.from === 'me' ? 'justify-end' : 'justify-start'}`}
           >
             <div
-              className={`max-w-[75%] break-words rounded-2xl px-4 py-2 text-sm leading-snug shadow-sm ${
+              className={`max-w-[75%] break-words rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                 message.from === 'me'
-                  ? 'rounded-br-md bg-brand text-brand-fg'
-                  : 'rounded-bl-md border border-neutral-200 bg-white text-neutral-900 dark:border-transparent dark:bg-neutral-800 dark:text-neutral-100'
+                  ? 'rounded-br-md bg-brand text-brand-fg shadow-sm'
+                  : 'rounded-bl-md bg-neutral-100 text-neutral-800 shadow-sm dark:bg-neutral-800 dark:text-neutral-100'
               }`}
             >
               {message.text}
@@ -76,7 +76,7 @@ export function ChatPanel({
         {peerTyping && (
           <div className="flex justify-start">
             <div
-              className="flex items-center gap-1.5 rounded-2xl rounded-bl-md border border-neutral-200 bg-white px-4 py-3 dark:border-transparent dark:bg-neutral-800"
+              className="flex items-center gap-1.5 rounded-2xl rounded-bl-md bg-neutral-100 px-4 py-3 shadow-sm dark:bg-neutral-800"
               aria-label={t('chatTyping')}
             >
               <span className="h-1.5 w-1.5 animate-bounce rounded-full bg-neutral-400 [animation-delay:0ms]" />
@@ -89,7 +89,7 @@ export function ChatPanel({
 
       <form
         onSubmit={handleSubmit}
-        className="flex items-center gap-2 border-t border-neutral-200 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900/60"
+        className="flex items-center gap-2 border-t border-neutral-100 bg-white p-3 dark:border-neutral-800 dark:bg-neutral-900/60"
       >
         <input
           ref={inputRef}
@@ -102,13 +102,13 @@ export function ChatPanel({
           placeholder={t('chatPlaceholder')}
           disabled={!ready}
           maxLength={2000}
-          className="min-w-0 flex-1 rounded-full border border-neutral-200 bg-neutral-100 px-4 py-2.5 text-sm text-neutral-900 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-900 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:bg-neutral-900"
+          className="min-w-0 flex-1 rounded-full border border-neutral-200 bg-neutral-100 px-4 py-2.5 text-sm text-neutral-800 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/20 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-800 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:bg-neutral-800"
         />
         <button
           type="submit"
           disabled={!ready || draft.trim().length === 0}
           aria-label={t('chatSend')}
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-brand-fg transition hover:scale-105 hover:opacity-90 active:scale-95 disabled:scale-100 disabled:opacity-40"
+          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-brand text-brand-fg shadow-sm transition hover:scale-105 hover:bg-brand-strong hover:shadow-md active:scale-95 disabled:scale-100 disabled:opacity-30 disabled:shadow-none"
         >
           <SendIcon className="h-4 w-4" />
         </button>

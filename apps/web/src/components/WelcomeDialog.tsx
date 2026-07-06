@@ -1,17 +1,35 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 
 const STORAGE_KEY = 'cougny.welcomeAccepted.v4';
 
-export function useWelcomeAccepted(): boolean {
-  if (typeof window === 'undefined') return false;
-  try {
-    return window.localStorage.getItem(STORAGE_KEY) === 'true';
-  } catch {
-    return false;
-  }
+export function useWelcomeAccepted(): [boolean, (accepted: boolean) => void] {
+  // Always start false so SSR and the first client render match.
+  // Sync with localStorage after mount to skip the dialog for returning users.
+  const [accepted, setAccepted] = useState(false);
+
+  useEffect(() => {
+    try {
+      if (window.localStorage.getItem(STORAGE_KEY) === 'true') {
+        setAccepted(true);
+      }
+    } catch {
+      // localStorage unavailable — ignore.
+    }
+  }, []);
+
+  const persist = (value: boolean): void => {
+    try {
+      window.localStorage.setItem(STORAGE_KEY, String(value));
+    } catch {
+      // localStorage unavailable — ignore.
+    }
+    setAccepted(value);
+  };
+
+  return [accepted, persist];
 }
 
 interface Props {
@@ -38,10 +56,10 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-xl">
-      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-800 dark:bg-neutral-950">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-white/70 p-4 backdrop-blur-xl dark:bg-black/80">
+      <div className="flex max-h-[90vh] w-full max-w-md flex-col overflow-hidden rounded-3xl border border-neutral-200/60 bg-white shadow-xl dark:border-neutral-800 dark:bg-neutral-950">
         {/* Header */}
-        <div className="shrink-0 border-b border-neutral-200 px-8 pb-6 pt-10 text-center dark:border-neutral-800">
+        <div className="shrink-0 border-b border-neutral-100 px-8 pb-6 pt-10 text-center dark:border-neutral-800">
           <h1 className="font-display text-3xl tracking-wide text-neutral-900 dark:text-white">
             COUGNY
           </h1>
@@ -54,7 +72,11 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
         <div className="flex-1 space-y-3 overflow-y-auto px-6 py-6">
           {/* Age */}
           <label
-            className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition ${age ? 'border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900' : 'border-neutral-200 dark:border-neutral-800'}`}
+            className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+              age
+                ? 'border-neutral-300 bg-neutral-50 shadow-sm dark:border-neutral-700 dark:bg-neutral-900'
+                : 'border-neutral-200 bg-white hover:border-neutral-300 dark:border-neutral-800 dark:bg-transparent dark:hover:border-neutral-700'
+            }`}
           >
             <input
               type="checkbox"
@@ -63,7 +85,7 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
                 setAge(e.target.checked);
                 setError(false);
               }}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded accent-neutral-900 dark:accent-white"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded accent-brand"
             />
             <div>
               <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
@@ -77,7 +99,11 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
 
           {/* CSAM */}
           <label
-            className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition ${csam ? 'border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900' : 'border-neutral-200 dark:border-neutral-800'}`}
+            className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+              csam
+                ? 'border-neutral-300 bg-neutral-50 shadow-sm dark:border-neutral-700 dark:bg-neutral-900'
+                : 'border-neutral-200 bg-white hover:border-neutral-300 dark:border-neutral-800 dark:bg-transparent dark:hover:border-neutral-700'
+            }`}
           >
             <input
               type="checkbox"
@@ -86,7 +112,7 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
                 setCsam(e.target.checked);
                 setError(false);
               }}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded accent-neutral-900 dark:accent-white"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded accent-brand"
             />
             <div>
               <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
@@ -100,7 +126,11 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
 
           {/* Terms */}
           <label
-            className={`flex cursor-pointer items-start gap-3 rounded-2xl border-2 p-4 transition ${terms ? 'border-neutral-900 bg-neutral-50 dark:border-white dark:bg-neutral-900' : 'border-neutral-200 dark:border-neutral-800'}`}
+            className={`flex cursor-pointer items-start gap-3 rounded-2xl border p-4 transition ${
+              terms
+                ? 'border-neutral-300 bg-neutral-50 shadow-sm dark:border-neutral-700 dark:bg-neutral-900'
+                : 'border-neutral-200 bg-white hover:border-neutral-300 dark:border-neutral-800 dark:bg-transparent dark:hover:border-neutral-700'
+            }`}
           >
             <input
               type="checkbox"
@@ -109,7 +139,7 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
                 setTerms(e.target.checked);
                 setError(false);
               }}
-              className="mt-0.5 h-5 w-5 shrink-0 rounded accent-neutral-900 dark:accent-white"
+              className="mt-0.5 h-5 w-5 shrink-0 rounded accent-brand"
             />
             <div>
               <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
@@ -123,7 +153,7 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
         </div>
 
         {/* Button */}
-        <div className="shrink-0 border-t border-neutral-200 px-6 py-5 dark:border-neutral-800">
+        <div className="shrink-0 border-t border-neutral-100 px-6 py-5 dark:border-neutral-800">
           {error && (
             <p className="mb-3 text-center text-sm font-semibold text-red-500">
               {t('allRequired')}
@@ -134,8 +164,8 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
             disabled={!all}
             className={`w-full rounded-2xl py-3.5 text-sm font-bold uppercase tracking-widest transition-all ${
               all
-                ? 'bg-neutral-900 text-white shadow-lg hover:bg-neutral-800 active:scale-[0.99] dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200'
-                : 'cursor-not-allowed bg-neutral-200 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-600'
+                ? 'bg-brand text-white shadow-md hover:bg-brand-strong hover:shadow-lg active:scale-[0.99] dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200'
+                : 'cursor-not-allowed bg-neutral-100 text-neutral-400 dark:bg-neutral-800 dark:text-neutral-600'
             }`}
           >
             {t('agreeButton')}

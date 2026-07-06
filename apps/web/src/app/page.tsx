@@ -31,7 +31,7 @@ export default function HomePage(): React.ReactElement {
   const [reportTarget, setReportTarget] = useState<{ roomId: string; peerId: string } | null>(null);
   const [reportThanks, setReportThanks] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [welcomeAccepted, setWelcomeAccepted] = useState(useWelcomeAccepted());
+  const [welcomeAccepted, setWelcomeAccepted] = useWelcomeAccepted();
 
   useEffect(() => {
     if (!reportThanks) return;
@@ -43,11 +43,11 @@ export default function HomePage(): React.ReactElement {
     if (call.error) {
       return (
         <div className="space-y-4 px-6 text-center">
-          <p className="text-base text-neutral-600 dark:text-neutral-300">{t(call.error)}</p>
+          <p className="text-base text-neutral-500 dark:text-neutral-400">{t(call.error)}</p>
           {call.error === 'permissionDenied' && (
             <button
               onClick={call.start}
-              className="rounded-full bg-brand px-6 py-2 font-semibold text-brand-fg transition hover:scale-105 hover:bg-brand-strong active:scale-95"
+              className="rounded-full bg-brand px-6 py-2.5 font-semibold text-brand-fg shadow-md transition hover:scale-105 hover:bg-brand-strong hover:shadow-lg active:scale-95"
             >
               {t('permissionRetry')}
             </button>
@@ -59,15 +59,15 @@ export default function HomePage(): React.ReactElement {
     if (call.status === 'idle') {
       return (
         <div className="flex flex-col items-center gap-3 px-6 text-center">
-          <UserIcon className="h-12 w-12 text-neutral-300 dark:text-neutral-600" />
-          <p className="text-base text-neutral-500 dark:text-neutral-400">{t('idleHint')}</p>
+          <UserIcon className="h-16 w-16 text-neutral-200 dark:text-neutral-700" />
+          <p className="text-base text-neutral-400 dark:text-neutral-500">{t('idleHint')}</p>
         </div>
       );
     }
 
     if (call.status === 'peer-left') {
       return (
-        <p className="px-6 text-center text-base text-neutral-500 dark:text-neutral-400">
+        <p className="px-6 text-center text-base text-neutral-400 dark:text-neutral-500">
           {t('peerLeft')}
         </p>
       );
@@ -76,7 +76,7 @@ export default function HomePage(): React.ReactElement {
     return (
       <div className="flex flex-col items-center gap-4 px-6 text-center">
         <SpinnerIcon className="h-8 w-8 animate-spin text-brand" />
-        <p className="text-base text-neutral-500 dark:text-neutral-400">
+        <p className="text-base text-neutral-400 dark:text-neutral-500">
           {t(statusMessageKey(call.status))}
         </p>
       </div>
@@ -99,9 +99,9 @@ export default function HomePage(): React.ReactElement {
             />
           ) : (
             <div className="flex h-full w-full flex-col items-center justify-center gap-3">
-              <UserIcon className="h-12 w-12 text-neutral-300 dark:text-neutral-600" />
+              <UserIcon className="h-16 w-16 text-neutral-200 dark:text-neutral-700" />
               {call.localStream && !call.cameraEnabled && (
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
+                <p className="text-sm text-neutral-400 dark:text-neutral-500">
                   {t('cameraOffNote')}
                 </p>
               )}
@@ -129,7 +129,7 @@ export default function HomePage(): React.ReactElement {
           )}
 
           {/* COUGNY watermark — top-left of self view. */}
-          <span className="pointer-events-none absolute left-3 top-3 z-10 font-display text-3xl text-neutral-400/50 select-none">
+          <span className="pointer-events-none absolute left-3 top-3 z-10 font-display text-3xl text-neutral-300/40 select-none">
             COUGNY
           </span>
         </VideoPanel>
@@ -147,8 +147,8 @@ export default function HomePage(): React.ReactElement {
               return (
                 <div className="flex h-full w-full items-center justify-center">
                   <div className="flex flex-col items-center gap-3 px-6 text-center">
-                    <CameraOffIcon className="h-10 w-10 text-neutral-400 dark:text-neutral-500" />
-                    <p className="text-base text-neutral-500 dark:text-neutral-400">
+                    <CameraOffIcon className="h-12 w-12 text-neutral-300 dark:text-neutral-600" />
+                    <p className="text-base text-neutral-400 dark:text-neutral-500">
                       {t('remoteCameraOff')}
                     </p>
                   </div>
@@ -165,7 +165,7 @@ export default function HomePage(): React.ReactElement {
           {call.status === 'connected' && call.roomId && call.peerId && (
             <button
               onClick={() => setReportTarget({ roomId: call.roomId!, peerId: call.peerId! })}
-              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-red-600/90"
+              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1.5 text-xs font-medium text-neutral-600 shadow-sm backdrop-blur transition hover:bg-red-50 hover:text-red-600 dark:bg-neutral-950/60 dark:text-white dark:hover:bg-red-600/90 dark:hover:text-white"
             >
               <FlagIcon className="h-3.5 w-3.5" />
               {t('report')}
@@ -190,14 +190,14 @@ export default function HomePage(): React.ReactElement {
       {reportThanks && (
         <div
           role="status"
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-medium text-neutral-50 shadow-2xl dark:bg-neutral-800 dark:text-neutral-100"
+          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-white px-5 py-2.5 text-sm font-medium text-neutral-700 shadow-lg ring-1 ring-black/5 dark:bg-neutral-800 dark:text-neutral-100 dark:ring-white/10"
         >
           {tReport('thanks')}
         </div>
       )}
 
-      {/* Bottom: exactly 35% of screen. */}
-      <div className="overflow-visible border-t border-neutral-200/50 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950">
+      {/* Bottom: control strip. */}
+      <div className="overflow-visible border-t border-neutral-100 bg-white dark:border-neutral-800 dark:bg-neutral-950">
         <MatchControls
           status={call.status}
           onStart={call.start}
@@ -214,10 +214,10 @@ export default function HomePage(): React.ReactElement {
       <button
         onClick={() => setChatOpen(!chatOpen)}
         aria-label={t('chatToggle')}
-        className={`fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition hover:scale-105 active:scale-95 ${
+        className={`fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full shadow-md transition hover:scale-105 active:scale-95 ${
           call.status === 'connected'
-            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-            : 'bg-neutral-300 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
+            ? 'bg-brand text-white shadow-glow-brand hover:bg-brand-strong'
+            : 'bg-white text-neutral-400 ring-1 ring-black/5 hover:text-neutral-600 dark:bg-neutral-800 dark:text-neutral-500 dark:ring-white/5 dark:hover:text-neutral-300'
         }`}
       >
         {chatOpen ? (
@@ -246,9 +246,9 @@ export default function HomePage(): React.ReactElement {
 
       {/* Floating chat window. */}
       {chatOpen && (
-        <div className="fixed bottom-20 right-4 z-40 flex h-[60vh] max-h-[500px] w-[calc(100vw-2rem)] max-w-80 flex-col rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900 sm:w-96">
-          <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-700">
-            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
+        <div className="fixed bottom-20 right-4 z-40 flex h-[60vh] max-h-[500px] w-[calc(100vw-2rem)] max-w-80 flex-col rounded-2xl border border-neutral-200/60 bg-white shadow-xl dark:border-neutral-700/60 dark:bg-neutral-900 sm:w-96">
+          <div className="flex items-center justify-between border-b border-neutral-100 px-4 py-2.5 dark:border-neutral-800">
+            <span className="text-sm font-semibold text-neutral-800 dark:text-neutral-200">
               {t('chat')}
             </span>
             <button
@@ -323,8 +323,8 @@ function MediaToggle({
       title={label}
       className={`flex h-9 w-9 items-center justify-center rounded-full backdrop-blur transition hover:scale-105 active:scale-95 ${
         enabled
-          ? 'bg-neutral-950/60 text-white hover:bg-neutral-800/80'
-          : 'bg-red-600/90 text-white hover:bg-red-500'
+          ? 'bg-white/70 text-neutral-700 shadow-sm ring-1 ring-black/5 hover:bg-white hover:text-neutral-900 dark:bg-neutral-800/80 dark:text-white dark:hover:bg-neutral-700/80'
+          : 'bg-red-500/90 text-white shadow-sm hover:bg-red-500 dark:bg-red-600/90 dark:hover:bg-red-500'
       }`}
     >
       {enabled ? iconOn : iconOff}
@@ -342,11 +342,11 @@ function VideoPanel({
   children: React.ReactNode;
 }): React.ReactElement {
   return (
-    <div className="relative flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
+    <div className="relative flex-1 overflow-hidden rounded-2xl border border-neutral-200/60 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
       {children}
 
       {/* Label chip at bottom-left. */}
-      <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1 text-xs font-medium text-white backdrop-blur">
+      <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-white/70 px-3 py-1 text-xs font-medium text-neutral-600 shadow-sm ring-1 ring-black/5 backdrop-blur dark:bg-neutral-950/60 dark:text-white dark:ring-white/10">
         {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
         {label}
       </span>

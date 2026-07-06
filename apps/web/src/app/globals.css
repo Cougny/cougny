@@ -25,8 +25,21 @@
   --color-brand-strong: #6d28d9;
   --color-brand-accent: #c026d3;
   --color-brand-fg: #ffffff;
+
+  --color-surface: #ffffff;
+  --color-surface-raised: #fafafa;
+  --color-surface-muted: #f5f5f4;
+
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: 'TanBuster', ui-serif, Georgia, serif;
+
+  /* Layered shadow tokens for depth hierarchy. */
+  --shadow-xs: 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-sm: 0 1px 3px rgb(0 0 0 / 0.06), 0 1px 2px rgb(0 0 0 / 0.04);
+  --shadow-md: 0 4px 12px rgb(0 0 0 / 0.06), 0 2px 4px rgb(0 0 0 / 0.04);
+  --shadow-lg: 0 12px 32px rgb(0 0 0 / 0.08), 0 4px 8px rgb(0 0 0 / 0.04);
+  --shadow-xl: 0 20px 48px rgb(0 0 0 / 0.1), 0 8px 16px rgb(0 0 0 / 0.04);
+  --shadow-glow-brand: 0 0 0 3px rgb(124 58 237 / 0.2);
 }
 
 :root {
@@ -35,6 +48,11 @@
 
 :root.dark {
   color-scheme: dark;
+
+  /* Override surface tokens for dark mode. */
+  --color-surface: #0a0a0a;
+  --color-surface-raised: #141414;
+  --color-surface-muted: #1a1a1a;
 }
 
 html,
@@ -43,13 +61,50 @@ body {
 }
 
 body {
-  @apply bg-neutral-100 text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+  @apply bg-white text-neutral-900 antialiased dark:bg-neutral-950 dark:text-neutral-100;
+  /* Subtle noise-like grain texture via repeating gradient — invisible to
+     most eyes but adds a tactile quality that pure flat #fff lacks. */
+  background-image: radial-gradient(ellipse at 50% 0%, rgb(0 0 0 / 0.008) 0%, transparent 70%);
 }
 
+/* Scrollbar — slim & subtle, matching the white aesthetic. */
 @layer base {
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: rgb(0 0 0 / 0.12) transparent;
+  }
+
+  *::-webkit-scrollbar {
+    width: 6px;
+  }
+  *::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  *::-webkit-scrollbar-thumb {
+    background: rgb(0 0 0 / 0.12);
+    border-radius: 9999px;
+  }
+  *::-webkit-scrollbar-thumb:hover {
+    background: rgb(0 0 0 / 0.2);
+  }
+
   /* Preflight resets buttons to `cursor: default`; interactive means pointer. */
   button:not(:disabled),
   [role='button']:not(:disabled) {
     cursor: pointer;
   }
+
+  /* Global focus-ring: visible, accessible, on-brand. */
+  *:focus-visible {
+    outline: 2px solid var(--color-brand);
+    outline-offset: 2px;
+    border-radius: 2px;
+  }
+}
+
+/* Subtle backdrop blur utility — used by dialogs & glass elements. */
+@utility glass {
+  background: rgb(255 255 255 / 0.72);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
 }
