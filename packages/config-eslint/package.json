@@ -13,7 +13,7 @@
     "@next/eslint-plugin-next": "^16.2.10",
     "eslint-config-prettier": "^10.1.8",
     "eslint-plugin-react-hooks": "^7.1.1",
-    "typescript-eslint": "^8.62.1"
+    "typescript-eslint": "^8.63.0"
   },
   "peerDependencies": {
     "eslint": ">=9.17.0"
