@@ -51,7 +51,9 @@ export function WelcomeDialog({ onAccept }: Props): React.ReactElement {
     }
     try {
       window.localStorage.setItem(STORAGE_KEY, 'true');
-    } catch {}
+    } catch {
+      // Ignore storage failures (private mode, disabled storage); consent still applies for this session.
+    }
     onAccept();
   };
 

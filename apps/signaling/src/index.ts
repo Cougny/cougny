@@ -2,7 +2,10 @@ import { createSignalingServer } from './server.js';
 import { logger } from './logger.js';
 
 const server = createSignalingServer();
-server.start();
+server.start().catch((err: unknown) => {
+  logger.error({ err }, 'failed to start signaling server');
+  process.exit(1);
+});
 
 for (const signal of ['SIGINT', 'SIGTERM'] as const) {
   process.on(signal, () => {
