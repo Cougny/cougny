@@ -27,6 +27,33 @@
   --color-brand-fg: #ffffff;
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-display: 'TanBuster', ui-serif, Georgia, serif;
+
+  /*
+   * Entrance for the account screens. Applied through `motion-safe:` so a
+   * reduced-motion preference gets the composed result with no movement.
+   */
+  --animate-auth-card: auth-card-in 480ms cubic-bezier(0.16, 1, 0.3, 1) both;
+  --animate-auth-backdrop: auth-backdrop-in 600ms ease-out both;
+}
+
+@keyframes auth-card-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes auth-backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 :root {

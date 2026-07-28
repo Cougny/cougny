@@ -3,7 +3,9 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import type { AuthStatus } from '@/components/auth/AuthProvider';
-import { SpinnerIcon, UserIcon } from '@/components/icons';
+import { AuthBackdrop } from '@/components/auth/AuthBackdrop';
+import { AuthShell } from '@/components/auth/AuthShell';
+import { SpinnerIcon } from '@/components/icons';
 
 interface SignInGateProps {
   status: AuthStatus;
@@ -14,6 +16,11 @@ interface SignInGateProps {
 /**
  * What a visitor sees in place of the call stage when they cannot call yet.
  *
+ * The same floating card as the account screens, over the same blurred view of
+ * the app: the product is visible but out of reach, and the one way through it
+ * is the card. Moving on to sign-up or sign-in swaps the card's contents and
+ * leaves the backdrop where it is.
+ *
  * This replaces the old consent splash. The age, conduct, and terms
  * attestations now live in the sign-up form, where they are recorded against a
  * real account rather than a checkbox in this browser's local storage — which
@@ -21,38 +28,32 @@ interface SignInGateProps {
  */
 export function SignInGate({ status, profileComplete }: SignInGateProps): React.ReactElement {
   const t = useTranslations('call');
+  const tApp = useTranslations('app');
   const tAccount = useTranslations('account');
 
   // Says nothing until the initial refresh resolves: flashing "sign in" at
   // someone who is already signed in reads as being logged out.
   if (status === 'loading') {
     return (
-      <main className="flex flex-1 items-center justify-center">
-        <SpinnerIcon className="h-8 w-8 animate-spin text-brand" />
-      </main>
+      <div className="relative flex min-h-dvh items-center justify-center">
+        <AuthBackdrop />
+        <SpinnerIcon className="relative h-8 w-8 animate-spin text-brand" />
+      </div>
     );
   }
 
   const needsCompletion = status === 'authenticated' && !profileComplete;
 
   return (
-    <main className="flex flex-1 flex-col items-center justify-center px-6 py-12 text-center">
-      <span className="flex h-16 w-16 items-center justify-center rounded-full bg-brand/10 text-brand">
-        <UserIcon className="h-8 w-8" />
-      </span>
-
-      <h1 className="pt-6 font-display text-4xl tracking-wide text-neutral-900 dark:text-white">
-        COUGNY
-      </h1>
-      <p className="max-w-md pt-3 text-base text-neutral-600 dark:text-neutral-300">
-        {needsCompletion ? tAccount('completeSubtitle') : t('signInToStart')}
-      </p>
-
-      <div className="flex w-full max-w-xs flex-col gap-3 pt-8">
+    <AuthShell
+      title={tApp('tagline')}
+      subtitle={needsCompletion ? tAccount('completeSubtitle') : t('signInToStart')}
+    >
+      <div className="flex flex-col gap-3">
         {needsCompletion ? (
           <Link
             href="/signup/complete"
-            className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg transition hover:bg-brand-strong active:scale-[0.99]"
+            className="rounded-xl bg-brand px-4 py-2.5 text-center text-sm font-semibold text-brand-fg transition hover:bg-brand-strong active:scale-[0.99]"
           >
             {tAccount('finishSetup')}
           </Link>
@@ -60,13 +61,13 @@ export function SignInGate({ status, profileComplete }: SignInGateProps): React.
           <>
             <Link
               href="/signup"
-              className="rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg transition hover:bg-brand-strong active:scale-[0.99]"
+              className="rounded-xl bg-brand px-4 py-2.5 text-center text-sm font-semibold text-brand-fg transition hover:bg-brand-strong active:scale-[0.99]"
             >
               {tAccount('createAccount')}
             </Link>
             <Link
               href="/login"
-              className="rounded-xl border border-neutral-200 px-4 py-2.5 text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 active:scale-[0.99] dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
+              className="rounded-xl border border-neutral-200 px-4 py-2.5 text-center text-sm font-semibold text-neutral-700 transition hover:bg-neutral-50 active:scale-[0.99] dark:border-neutral-700 dark:text-neutral-200 dark:hover:bg-neutral-800"
             >
               {tAccount('signIn')}
             </Link>
@@ -74,9 +75,9 @@ export function SignInGate({ status, profileComplete }: SignInGateProps): React.
         )}
       </div>
 
-      <p className="max-w-sm pt-8 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
+      <p className="pt-6 text-xs leading-relaxed text-neutral-500 dark:text-neutral-400">
         {t('adultsOnlyNotice')}
       </p>
-    </main>
+    </AuthShell>
   );
 }

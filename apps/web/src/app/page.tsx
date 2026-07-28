@@ -8,6 +8,7 @@ import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
 import { SiteHeader } from '@/components/SiteHeader';
+import { VideoPanel } from '@/components/VideoPanel';
 import { SignInGate } from '@/components/auth/SignInGate';
 import { useAuth } from '@/components/auth/AuthProvider';
 import {
@@ -91,15 +92,11 @@ export default function HomePage(): React.ReactElement {
     );
   };
 
-  // Signed-out visitors get the sign-in invitation instead of the call stage;
-  // there is nothing here they could use yet.
+  // Signed-out visitors get the sign-in card over a blurred stage instead of
+  // the stage itself; there is nothing here they could use yet. The gate brings
+  // its own header, so this branch does not add one.
   if (!canCall) {
-    return (
-      <div className="flex h-dvh flex-col">
-        <SiteHeader />
-        <SignInGate status={authStatus} profileComplete={user?.profileComplete ?? false} />
-      </div>
-    );
+    return <SignInGate status={authStatus} profileComplete={user?.profileComplete ?? false} />;
   }
 
   return (
@@ -345,27 +342,5 @@ function MediaToggle({
     >
       {enabled ? iconOn : iconOff}
     </button>
-  );
-}
-
-function VideoPanel({
-  label,
-  live = false,
-  children,
-}: {
-  label: string;
-  live?: boolean;
-  children: React.ReactNode;
-}): React.ReactElement {
-  return (
-    <div className="relative flex-1 overflow-hidden rounded-2xl border border-neutral-200 bg-white shadow-sm dark:border-neutral-800 dark:bg-neutral-900">
-      {children}
-
-      {/* Label chip at bottom-left. */}
-      <span className="absolute bottom-3 left-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1 text-xs font-medium text-white backdrop-blur">
-        {live && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-400" />}
-        {label}
-      </span>
-    </div>
   );
 }
