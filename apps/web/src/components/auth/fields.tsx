@@ -7,7 +7,7 @@
  */
 
 const INPUT_CLASS =
-  'w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500';
+  'w-full rounded-xl border border-neutral-200 bg-neutral-50 px-4 py-2.5 text-sm text-neutral-900 transition placeholder:text-neutral-400 focus:border-brand focus:bg-white focus:outline-none focus:ring-2 focus:ring-brand/40 disabled:opacity-40 dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100 dark:placeholder:text-neutral-500 dark:focus:bg-neutral-950';
 
 export function Field({
   id,
@@ -38,7 +38,14 @@ export function TextInput(props: React.InputHTMLAttributes<HTMLInputElement>): R
   return <input {...props} className={INPUT_CLASS} />;
 }
 
-/** A full-width primary action, with a disabled state for pending submits. */
+/**
+ * A full-width primary action, with a disabled state for pending submits.
+ *
+ * Ink on paper, inverted per theme — black on light, white on dark — the same
+ * treatment the wordmark gets. On a card whose only other colour is the
+ * providers' own logos, the strongest contrast available is what marks the
+ * primary action; a brand fill here would compete with the mark instead.
+ */
 export function SubmitButton({
   children,
   disabled,
@@ -52,7 +59,7 @@ export function SubmitButton({
     <button
       type="submit"
       disabled={disabled || pending}
-      className="w-full rounded-xl bg-brand px-4 py-2.5 text-sm font-semibold text-brand-fg transition hover:bg-brand-strong active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40"
+      className="w-full rounded-xl bg-neutral-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-neutral-800 active:scale-[0.99] disabled:cursor-not-allowed disabled:opacity-40 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
     >
       {children}
     </button>

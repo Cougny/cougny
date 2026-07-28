@@ -42,7 +42,13 @@ export function AuthShell({
 
       <div className="relative flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <section className="relative w-full max-w-md motion-safe:animate-auth-card">
-          <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/90 shadow-2xl shadow-neutral-900/25 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/80 dark:shadow-black/60">
+          {/*
+           * The shadow sits below the card and nowhere else. A negative spread
+           * pulls it inside the card's own edges and the offset pushes it back
+           * out downward, so it cannot halo the sides or peek above the top —
+           * it reads as the card resting on the page rather than glowing.
+           */}
+          <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/90 shadow-[0_14px_22px_-14px_rgba(15,23,42,0.35)] backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/80 dark:shadow-[0_14px_22px_-14px_rgba(0,0,0,0.75)]">
             {/* Hairline along the top edge, the way light catches real glass. */}
             <span
               aria-hidden
