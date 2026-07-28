@@ -15,10 +15,10 @@
   "dependencies": {
     "@cougny/protocol": "workspace:*",
     "@simplewebauthn/browser": "^13.3.0",
-    "next": "^16.2.10",
-    "next-intl": "^4.13.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "next": "^16.2.12",
+    "next-intl": "^4.13.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@cougny/config-eslint": "workspace:*",
