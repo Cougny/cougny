@@ -53,7 +53,7 @@ export function SignInGate({ status, profileComplete }: SignInGateProps): React.
         {needsCompletion ? (
           <Link
             href="/signup/complete"
-            className="rounded-xl bg-brand px-4 py-2.5 text-center text-sm font-semibold text-brand-fg transition hover:bg-brand-strong active:scale-[0.99]"
+            className="rounded-xl bg-neutral-900 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-neutral-800 active:scale-[0.99] dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
           >
             {tAccount('finishSetup')}
           </Link>
@@ -61,7 +61,7 @@ export function SignInGate({ status, profileComplete }: SignInGateProps): React.
           <>
             <Link
               href="/signup"
-              className="rounded-xl bg-brand px-4 py-2.5 text-center text-sm font-semibold text-brand-fg transition hover:bg-brand-strong active:scale-[0.99]"
+              className="rounded-xl bg-neutral-900 px-4 py-2.5 text-center text-sm font-semibold text-white transition hover:bg-neutral-800 active:scale-[0.99] dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
             >
               {tAccount('createAccount')}
             </Link>
