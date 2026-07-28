@@ -2,7 +2,6 @@
 
 import { useTranslations } from 'next-intl';
 import { MatchControls } from '@/components/MatchControls';
-import { SiteHeader } from '@/components/SiteHeader';
 import { VideoPanel } from '@/components/VideoPanel';
 import { UserIcon } from '@/components/icons';
 
@@ -12,9 +11,9 @@ const noop = (): void => undefined;
 /**
  * The Cougny call screen, one pane of frosted glass away.
  *
- * This is the real interface — the same header, stage panels, and controls the
- * app renders — held in the idle state a visitor would meet on the other side
- * of sign-up, then blurred and dimmed. Building it from the actual components
+ * This is the real interface — the same stage panels and controls the app
+ * renders — held in the idle state a visitor would meet on the other side of
+ * sign-up, then blurred and dimmed. Building it from the actual components
  * rather than a drawing of them means it cannot drift out of date, and what
  * someone sees behind the card is genuinely what they are signing up for.
  *
@@ -33,13 +32,15 @@ export function AuthBackdrop(): React.ReactElement {
       className="pointer-events-none fixed inset-0 select-none overflow-hidden bg-neutral-100 motion-safe:animate-auth-backdrop dark:bg-neutral-950"
     >
       {/*
-       * Scaled up slightly so the blur radius has material to sample past every
-       * edge — without it the frame reads as a soft grey border.
+       * Bled past the viewport rather than scaled up. The blur needs material
+       * to sample beyond every edge or the frame reads as a soft grey border,
+       * but doing that with a transform magnifies the interface — and a
+       * magnified UI behind the glass looks like a zoomed screenshot, not like
+       * the room next door. Growing the box keeps everything at its true size
+       * and pushes the soft edges off-screen instead.
        */}
-      <div className="absolute inset-0 scale-105 blur-[5px]">
-        <div className="grid h-full w-full grid-rows-[auto_1fr_auto] sm:grid-rows-[auto_70fr_30fr]">
-          <SiteHeader />
-
+      <div className="absolute inset-0 blur-[5px]">
+        <div className="grid h-full w-full grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
           <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
             <VideoPanel label={t('you')}>
               <div className="flex h-full w-full items-center justify-center">
@@ -68,11 +69,24 @@ export function AuthBackdrop(): React.ReactElement {
             />
           </div>
         </div>
-      </div>
 
-      {/* Brand wash, to keep a screen made of neutrals from reading as grey. */}
-      <div className="absolute -left-40 -top-48 h-[36rem] w-[36rem] rounded-full bg-brand/20 blur-3xl dark:bg-brand/20" />
-      <div className="absolute -bottom-52 -right-36 h-[32rem] w-[32rem] rounded-full bg-brand-accent/15 blur-3xl dark:bg-brand-accent/15" />
+        {/*
+         * The corner stack. Unlike the stage, these are drawn rather than
+         * mounted: at this blur they are three featureless discs, and the real
+         * controls would each bring an auth subscription and a click-away
+         * listener into a tree nobody can click.
+         *
+         * Deliberately unshadowed. Three drop shadows blurred on top of each
+         * other pool into one dark smudge in the corner, which reads as a
+         * rendering fault rather than as depth. Offset by the bleed above so
+         * they still land where the real controls sit.
+         */}
+        <div className="absolute bottom-4 right-4 flex flex-col-reverse gap-4">
+          <span className="h-12 w-12 rounded-full bg-neutral-300/90 dark:bg-neutral-700/90" />
+          <span className="h-12 w-12 rounded-full bg-neutral-300/90 dark:bg-neutral-700/90" />
+          <span className="h-12 w-12 rounded-full bg-neutral-300/90 dark:bg-neutral-700/90" />
+        </div>
+      </div>
 
       {/*
        * Scrim. It dims rather than washes out, the way a dialog dims the page

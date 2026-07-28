@@ -7,9 +7,10 @@ import { VideoView } from '@/components/VideoView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
-import { SiteHeader } from '@/components/SiteHeader';
+import { ThemeToggle } from '@/components/ThemeToggle';
 import { VideoPanel } from '@/components/VideoPanel';
 import { SignInGate } from '@/components/auth/SignInGate';
+import { AccountMenu } from '@/components/auth/AccountMenu';
 import { useAuth } from '@/components/auth/AuthProvider';
 import {
   CameraIcon,
@@ -100,9 +101,7 @@ export default function HomePage(): React.ReactElement {
   }
 
   return (
-    <main className="grid h-dvh grid-rows-[auto_1fr_auto] sm:grid-rows-[auto_70fr_30fr]">
-      <SiteHeader />
-
+    <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
       {/* Video stage: fills remaining space. */}
       <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
         <VideoPanel label={t('you')}>
@@ -222,6 +221,14 @@ export default function HomePage(): React.ReactElement {
           onPreferencesChange={call.updatePreferences}
         />
       </div>
+
+      {/*
+       * The call screen carries no header. Its chrome is this stack in the
+       * bottom-right corner instead, reading upward from the thing you reach
+       * for most: chat, brightness, then the account.
+       */}
+      <AccountMenu floating />
+      <ThemeToggle />
 
       {/* Floating chat button — always clickable. */}
       <button
