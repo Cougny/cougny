@@ -2,7 +2,6 @@
 
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { ThemeToggle } from '@/components/ThemeToggle';
 import { AuthBackdrop } from '@/components/auth/AuthBackdrop';
 
 interface AuthShellProps {
@@ -43,12 +42,6 @@ export function AuthShell({
 
       <div className="relative flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
         <section className="relative w-full max-w-md motion-safe:animate-auth-card">
-          {/* Halo: lifts the card off the backdrop without a hard drop shadow. */}
-          <div
-            aria-hidden
-            className="absolute -inset-5 rounded-[2.75rem] bg-gradient-to-br from-brand/20 via-brand-accent/10 to-transparent blur-2xl"
-          />
-
           <div className="relative overflow-hidden rounded-3xl border border-white/70 bg-white/90 shadow-2xl shadow-neutral-900/25 backdrop-blur-2xl dark:border-white/10 dark:bg-neutral-900/80 dark:shadow-black/60">
             {/* Hairline along the top edge, the way light catches real glass. */}
             <span
@@ -56,30 +49,30 @@ export function AuthShell({
               className="absolute inset-x-10 top-0 h-px bg-gradient-to-r from-transparent via-white to-transparent dark:via-white/30"
             />
 
-            <div className="px-7 py-8 sm:px-9 sm:py-10">
-              <div className="flex items-center justify-between">
-                <Link href="/" className="inline-flex">
-                  <span className="bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-lg font-extrabold tracking-tight text-transparent">
-                    {t('name')}
-                  </span>
-                </Link>
-                {/* Placed in the card rather than floating over it: this form
-                    scrolls, and nothing should hover across it. */}
-                <ThemeToggle className="-mr-2 flex h-9 w-9 items-center justify-center rounded-full text-neutral-500 transition hover:bg-neutral-900/5 hover:text-neutral-800 active:scale-95 dark:text-neutral-400 dark:hover:bg-white/10 dark:hover:text-neutral-100" />
-              </div>
+            <div className="px-8 py-9 sm:px-10 sm:py-11">
+              <Link href="/" className="inline-flex">
+                {/* The wordmark in the brand face, plain black on white and
+                    white on black — the mark carries the identity here, so
+                    colour on top of it is one thing too many. */}
+                <span className="font-display text-3xl uppercase leading-none tracking-wide text-neutral-900 dark:text-white">
+                  {t('name')}
+                </span>
+              </Link>
 
-              <h1 className="pt-5 text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-50">
+              <h1 className="pt-7 text-[1.375rem] font-semibold leading-snug tracking-tight text-neutral-900 dark:text-white">
                 {title}
               </h1>
               {subtitle && (
-                <p className="pt-2 text-sm text-neutral-500 dark:text-neutral-400">{subtitle}</p>
+                <p className="pt-1.5 text-sm leading-relaxed text-neutral-500 dark:text-neutral-400">
+                  {subtitle}
+                </p>
               )}
 
-              <div className="pt-7">{children}</div>
+              <div className="pt-8">{children}</div>
             </div>
 
             {footer && (
-              <div className="border-t border-neutral-200/70 bg-white/40 px-7 py-4 text-center text-sm text-neutral-500 sm:px-9 dark:border-white/10 dark:bg-white/[0.03] dark:text-neutral-400">
+              <div className="border-t border-neutral-200/60 bg-neutral-50/50 px-8 py-4 text-center text-sm text-neutral-500 sm:px-10 dark:border-white/[0.08] dark:bg-white/[0.02] dark:text-neutral-400">
                 {footer}
               </div>
             )}
