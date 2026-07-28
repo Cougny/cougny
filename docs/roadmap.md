@@ -33,8 +33,11 @@ This tracks what's deliberately deferred and where it plugs in.
 - ~~**Server-side validation of report participants.**~~ Done: the hub persists
   every match as a `Call` row and `POST /v1/reports` verifies both parties
   against it.
-- **Moderator dashboard** over the `Report` queue; session bans.
-- **Automated content moderation** and **age assurance**.
+- **Moderator dashboard** over the `Report` queue; account bans (the `User`
+  model already carries `status` and an `AuthAuditLog` trail).
+- **Automated content moderation**. Age is now _attested_ at sign-up and
+  enforced server-side, but not _assured_ — document or estimation-based age
+  verification is still open.
 
 ## Product
 
@@ -46,8 +49,11 @@ This tracks what's deliberately deferred and where it plugs in.
   `POST /v1/reports`, then auto-skip.
 - ~~**Reconnection UX.**~~ Done: transient ICE drops get a grace period and one
   ICE restart before "peer left".
-- **Accounts (optional)** — the `Session` model can gain an optional `User`
-  relation without reshaping existing tables.
+- ~~**Accounts.**~~ Done: email/password, Google and Discord sign-in, and
+  passkeys, over a `User` model that call sessions hang off via
+  `Session.userId`. An account is required to call — it carries the 18+
+  attestation and the agreement to the content rules, and gives moderation
+  something durable to act on. Remaining: moderator tooling on top of it.
 
 ## Platform
 

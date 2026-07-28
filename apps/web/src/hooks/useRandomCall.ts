@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import type { MatchPreferences, SignalPayload } from '@cougny/protocol';
 import { ensureSession, fetchIceServers } from '@/lib/api';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { SignalingClient } from '@/lib/signaling';
 
 export type CallStatus =
@@ -82,6 +83,9 @@ function parseChatFrame(data: unknown): ChatFrame | null {
  * breaking offer collisions.
  */
 export function useRandomCall(): UseRandomCall {
+  // Calls require an account, so the call session is always minted with the
+  // access token in hand and the server ties it to the signed-in user.
+  const { token } = useAuth();
   const [status, setStatus] = useState<CallStatus>('idle');
   const [error, setError] = useState<string | null>(null);
   const [localStream, setLocalStream] = useState<MediaStream | null>(null);
@@ -318,7 +322,8 @@ export function useRandomCall(): UseRandomCall {
         localStreamRef.current = media;
         setLocalStream(media);
 
-        const session = await ensureSession();
+        if (!token) throw new Error('An account is required to start a call.');
+        const session = await ensureSession(token);
         const ice = await fetchIceServers(session.token);
         iceServersRef.current = ice.iceServers as RTCIceServer[];
 
@@ -358,7 +363,7 @@ export function useRandomCall(): UseRandomCall {
         setStatus('error');
       }
     })();
-  }, [createPeerConnection, handleSignal, teardownPeer]);
+  }, [createPeerConnection, handleSignal, teardownPeer, token]);
 
   const next = useCallback(() => {
     const signaling = signalingRef.current;

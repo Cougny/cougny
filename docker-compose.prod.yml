@@ -88,6 +88,28 @@ services:
       TURN_URL: ${TURN_URL:?e.g. turn:turn.cougny.com:3478}
       TURN_STATIC_AUTH_SECRET: ${TURN_STATIC_AUTH_SECRET:?generate with `openssl rand -hex 32`}
       TURN_CREDENTIAL_TTL: ${TURN_CREDENTIAL_TTL:-86400}
+      # --- Accounts ---
+      # Email links and OAuth hand-offs are built from these two origins and
+      # nothing else, so they must be the real public URLs.
+      WEB_APP_URL: ${WEB_APP_URL:?e.g. https://cougny.com}
+      API_PUBLIC_URL: ${API_PUBLIC_URL:?e.g. https://api.cougny.com}
+      # Shared parent domain so the refresh cookie reaches both subdomains.
+      AUTH_COOKIE_DOMAIN: ${AUTH_COOKIE_DOMAIN:-}
+      AUTH_ACCESS_TOKEN_TTL: ${AUTH_ACCESS_TOKEN_TTL:-900}
+      AUTH_REFRESH_TOKEN_TTL: ${AUTH_REFRESH_TOKEN_TTL:-2592000}
+      # Social sign-in. Each provider is offered only when both values are set.
+      GOOGLE_OAUTH_CLIENT_ID: ${GOOGLE_OAUTH_CLIENT_ID:-}
+      GOOGLE_OAUTH_CLIENT_SECRET: ${GOOGLE_OAUTH_CLIENT_SECRET:-}
+      DISCORD_OAUTH_CLIENT_ID: ${DISCORD_OAUTH_CLIENT_ID:-}
+      DISCORD_OAUTH_CLIENT_SECRET: ${DISCORD_OAUTH_CLIENT_SECRET:-}
+      # Passkeys. Defaults to the WEB_APP_URL hostname; set explicitly only when
+      # passkeys must span subdomains.
+      WEBAUTHN_RP_ID: ${WEBAUTHN_RP_ID:-}
+      WEBAUTHN_RP_NAME: ${WEBAUTHN_RP_NAME:-Cougny}
+      # Without SMTP, verification and password-reset links are only logged —
+      # which makes account recovery impossible in production.
+      SMTP_URL: ${SMTP_URL:?e.g. smtp://user:pass@smtp.example.com:587}
+      MAIL_FROM: ${MAIL_FROM:-Cougny <no-reply@cougny.com>}
     healthcheck:
       test: ['CMD', 'wget', '-qO', '/dev/null', 'http://127.0.0.1:4000/healthz']
       interval: 30s

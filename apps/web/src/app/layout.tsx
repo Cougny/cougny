@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { NextIntlClientProvider } from 'next-intl';
 import { getLocale, getMessages } from 'next-intl/server';
 import { ThemeProvider } from '@/components/ThemeProvider';
+import { AuthProvider } from '@/components/auth/AuthProvider';
 import './globals.css';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter' });
@@ -36,7 +37,11 @@ export default async function RootLayout({
       </head>
       <body className="font-sans">
         <ThemeProvider>
-          <NextIntlClientProvider messages={messages}>{children}</NextIntlClientProvider>
+          <NextIntlClientProvider messages={messages}>
+            {/* Inside the intl provider so account UI can translate, and above
+                the routes so one refresh on load serves the whole app. */}
+            <AuthProvider>{children}</AuthProvider>
+          </NextIntlClientProvider>
         </ThemeProvider>
       </body>
     </html>

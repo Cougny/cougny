@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
-import Fastify, { type FastifyInstance } from 'fastify';
+import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
+import cookie from '@fastify/cookie';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import swagger from '@fastify/swagger';
@@ -16,6 +17,10 @@ import { registerHealthRoutes } from './routes/health.js';
 import { registerSessionRoutes } from './routes/session.js';
 import { registerIceRoutes } from './routes/ice.js';
 import { registerReportRoutes } from './routes/reports.js';
+import { registerAuthRoutes } from './routes/auth.js';
+import { registerAuthSessionRoutes } from './routes/auth-sessions.js';
+import { registerOAuthRoutes } from './routes/oauth.js';
+import { registerPasskeyRoutes } from './routes/passkeys.js';
 
 /**
  * Version advertised in the OpenAPI document. Read from this service's
@@ -55,6 +60,10 @@ export async function buildApp(): Promise<FastifyInstance> {
     credentials: true,
   });
 
+  // Reads the refresh-token and OAuth/WebAuthn ceremony cookies. Their values
+  // are already signed or hashed by the auth layer, so no cookie secret here.
+  await app.register(cookie);
+
   // Abuse throttling. With REDIS_URL set, counters are shared across API
   // instances; otherwise they live in-process. Routes tighten the generous
   // global ceiling via their own `config.rateLimit`.
@@ -87,6 +96,50 @@ export async function buildApp(): Promise<FastifyInstance> {
     }),
   });
 
+  /*
+   * One error shape for the whole API: `{ error: { code, message } }`, which is
+   * what `ErrorResponseSchema` documents and what clients narrow on.
+   *
+   * Without this, two things go wrong. Request-validation failures come back in
+   * Fastify's own `{ statusCode, code, error, message }` shape — which a route
+   * that documents a 400 then fails to serialize, turning a bad request into a
+   * 500. And unhandled exceptions serialize their own message, which for a
+   * database error means echoing the failing query and a source path back to
+   * the caller.
+   */
+  app.setErrorHandler((rawError, request, reply) => {
+    // Annotated explicitly: with the Zod type provider the handler's parameter
+    // is inferred as `unknown`, and every error Fastify routes here is a
+    // `FastifyError` regardless.
+    const error = rawError as FastifyError;
+
+    if (error.validation) {
+      reply.code(400).send({ error: { code: 'invalid_request', message: error.message } });
+      return;
+    }
+
+    // Errors thrown already carrying the envelope — rate limiting builds one.
+    const enveloped = error as unknown as { error?: { code?: string; message?: string } };
+    if (enveloped.error?.code && enveloped.error.message) {
+      reply.code(error.statusCode ?? 500).send({ error: enveloped.error });
+      return;
+    }
+
+    const status = error.statusCode ?? 500;
+    if (status >= 500) {
+      // Logged in full, reported as nothing: the details are for us.
+      request.log.error({ err: error }, 'request failed');
+      reply.code(status).send({
+        error: { code: 'internal_error', message: 'Something went wrong.' },
+      });
+      return;
+    }
+
+    reply.code(status).send({
+      error: { code: error.code ?? 'request_failed', message: error.message },
+    });
+  });
+
   // Request duration metrics for every route with a pattern (404s excluded).
   app.addHook('onResponse', (request, reply, done) => {
     const route = request.routeOptions.url;
@@ -105,7 +158,7 @@ export async function buildApp(): Promise<FastifyInstance> {
       info: {
         title: 'Cougny API',
         description:
-          'HTTP API for Cougny: anonymous sessions, WebRTC ICE credentials, and moderation reports.',
+          'HTTP API for Cougny: accounts, call sessions, WebRTC ICE credentials, and moderation reports.',
         version: API_VERSION,
       },
       servers: [{ url: `http://localhost:${env.API_PORT}`, description: 'Local development' }],
@@ -116,7 +169,11 @@ export async function buildApp(): Promise<FastifyInstance> {
       },
       tags: [
         { name: 'system', description: 'Health and readiness' },
-        { name: 'session', description: 'Anonymous session lifecycle' },
+        { name: 'session', description: 'Call session lifecycle' },
+        {
+          name: 'auth',
+          description: 'Accounts: registration, sign-in, social identities, and passkeys',
+        },
         { name: 'webrtc', description: 'ICE server / TURN credentials' },
         { name: 'moderation', description: 'Abuse reports' },
       ],
@@ -133,6 +190,13 @@ export async function buildApp(): Promise<FastifyInstance> {
   await app.register(registerSessionRoutes, { prefix: '/v1' });
   await app.register(registerIceRoutes, { prefix: '/v1' });
   await app.register(registerReportRoutes, { prefix: '/v1' });
+
+  // Accounts. Every route sits under /v1/auth so the refresh cookie can be
+  // scoped to that path rather than sent with all API traffic.
+  await app.register(registerAuthRoutes, { prefix: '/v1' });
+  await app.register(registerAuthSessionRoutes, { prefix: '/v1' });
+  await app.register(registerOAuthRoutes, { prefix: '/v1' });
+  await app.register(registerPasskeyRoutes, { prefix: '/v1' });
 
   // Prometheus scrape endpoint. Not part of the public API surface.
   app.get(

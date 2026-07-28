@@ -17,12 +17,20 @@ interface StoredSession {
   expiresAt: number;
 }
 
-/** Create or reuse an anonymous session, cached in localStorage. */
-export async function ensureSession(): Promise<StoredSession> {
+/**
+ * Create or reuse a call session, cached in localStorage.
+ *
+ * Requires a signed-in account: the server refuses to mint a call session
+ * without one, so the token is not optional here.
+ */
+export async function ensureSession(accessToken: string): Promise<StoredSession> {
   const cached = readCachedSession();
   if (cached) return cached;
 
-  const res = await fetch(`${clientEnv.apiUrl}/v1/sessions`, { method: 'POST' });
+  const res = await fetch(`${clientEnv.apiUrl}/v1/sessions`, {
+    method: 'POST',
+    headers: { authorization: `Bearer ${accessToken}` },
+  });
   if (!res.ok) throw new Error(`Failed to create session (${res.status})`);
 
   const data: CreateSessionResponse = CreateSessionResponseSchema.parse(await res.json());
@@ -56,6 +64,19 @@ export async function createReport(
   });
   if (!res.ok) throw new Error(`Failed to submit report (${res.status})`);
   return CreateReportResponseSchema.parse(await res.json());
+}
+
+/**
+ * Forget the cached session so the next call mints a fresh one. Used when
+ * signing in or out, so a session is never carried across that boundary — it
+ * would otherwise stay attached to the account someone just left.
+ */
+export function clearCachedSession(): void {
+  try {
+    window.localStorage.removeItem(SESSION_STORAGE_KEY);
+  } catch {
+    // Storage unavailable (private mode); nothing was cached to clear.
+  }
 }
 
 function readCachedSession(): StoredSession | null {

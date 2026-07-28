@@ -12,3 +12,5 @@ export const SIGNALING_PATH = `/v${PROTOCOL_VERSION}` as const;
 export * from './signaling.js';
 export * from './ice.js';
 export * from './rest.js';
+export * from './countries.js';
+export * from './auth.js';

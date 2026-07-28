@@ -3,8 +3,9 @@
 import Link from 'next/link';
 import { useTranslations } from 'next-intl';
 import { ThemeToggle } from '@/components/ThemeToggle';
+import { AccountMenu } from '@/components/auth/AccountMenu';
 
-/** Slim top bar: wordmark on the left, theme switch on the right. */
+/** Slim top bar: wordmark on the left, account controls and theme on the right. */
 export function SiteHeader(): React.ReactElement {
   const t = useTranslations('app');
 
@@ -18,7 +19,10 @@ export function SiteHeader(): React.ReactElement {
           {t('tagline')}
         </span>
       </Link>
-      <ThemeToggle />
+      <div className="flex items-center gap-2">
+        <AccountMenu />
+        <ThemeToggle />
+      </div>
     </header>
   );
 }

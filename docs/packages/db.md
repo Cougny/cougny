@@ -38,7 +38,8 @@ these tables.
 
 ### `Session`
 
-An anonymous visitor. Created on first load; authorizes the socket and API.
+A call session: the pseudonymous identity a call runs on. Created before a
+user's first call and attached to the account that created it via `userId`.
 Stores only coarse abuse-mitigation metadata: **hashed** IP, user agent, locale.
 
 ### `Call`
@@ -74,3 +75,30 @@ pnpm --filter @cougny/db migrate:deploy
 
 > The client must be generated (`pnpm db:generate`) before the API or `db`
 > package will type-check — CI runs this step before lint/typecheck.
+
+## Account models
+
+Added alongside the call layer; the two meet at `Session.userId`.
+
+| Model          | Holds                                                                                                                                                                     |
+| -------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `User`         | The account: email, Argon2id password digest, handle, date of birth (`@db.Date`), ISO country, role, status, and the `termsAcceptedAt` / `conductAcceptedAt` attestations |
+| `Passkey`      | A WebAuthn credential — public key, signature counter, transports, and whether it is device-bound or synced                                                               |
+| `OAuthAccount` | A Google or Discord identity, keyed on the provider's immutable subject id                                                                                                |
+| `AuthSession`  | One signed-in device. Holds a SHA-256 of the refresh token and a `familyId` shared by every rotation of that login                                                        |
+| `AuthToken`    | Single-use, expiring emailed tokens for verification and password reset, stored hashed                                                                                    |
+| `AuthAuditLog` | Append-only trail of security-relevant events                                                                                                                             |
+
+Three things are deliberate:
+
+- **Nothing usable is stored in the clear.** Passwords are Argon2id digests;
+  refresh and email tokens are stored as SHA-256 verifiers; a passkey row holds
+  only a public key. A dump of these tables lets an attacker authenticate as
+  nobody.
+- **`profileCompletedAt` gates the account.** A social sign-up arrives with no
+  date of birth and no country, so it stays incomplete — and unable to create a
+  call session — until its holder supplies them.
+- **Deleting a `User` cascades to its auth rows but not to call history.**
+  `Session.userId` is `SetNull`, so reports and call records survive: they are
+  evidence about other people too, and erasing them on request would be a way to
+  launder a moderation history.

@@ -34,13 +34,18 @@ only when a direct path is blocked by NAT/firewall).
 | **api**       | Sessions, ICE/TURN credentials, reports   | Fastify, Prisma, JWT      |
 | **signaling** | Matchmaking + SDP/ICE relay               | Node `ws`                 |
 | **coturn**    | STUN/TURN for NAT traversal               | self-hosted               |
-| **postgres**  | Sessions, calls, reports                  | PostgreSQL                |
+| **postgres**  | Accounts, sessions, calls, reports        | PostgreSQL                |
 | **protocol**  | Shared, typed wire contracts              | Zod                       |
 
 ## The lifecycle of a call
 
-1. **Session** — on first load the browser calls `POST /v1/sessions` and stores
-   the returned JWT (anonymous; no account).
+0. **Account** — calling requires one. The browser signs in (email/password,
+   Google, Discord, or a passkey) and holds a short-lived access token in
+   memory, refreshed from an httpOnly cookie. See
+   [api-reference.md](./api-reference.md#accounts).
+1. **Session** — it calls `POST /v1/sessions` with that access token and stores
+   the returned call-session JWT. The session is attached to the account, but
+   only its random id is ever shown to a peer.
 2. **ICE** — it calls `GET /v1/ice-servers` for STUN plus short-lived TURN
    credentials minted from coturn's shared secret.
 3. **Queue** — it opens a WebSocket to the signaling server and sends

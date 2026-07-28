@@ -19,6 +19,7 @@
     "build": "tsc -p tsconfig.json",
     "dev": "tsc -p tsconfig.json --watch",
     "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "vitest run",
     "lint": "eslint .",
     "clean": "rm -rf dist .turbo *.tsbuildinfo"
   },
@@ -29,6 +30,8 @@
     "@cougny/config-eslint": "workspace:*",
     "@cougny/config-typescript": "workspace:*",
     "eslint": "^10.6.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vite": "^8.1.3",
+    "vitest": "^4.1.9"
   }
 }

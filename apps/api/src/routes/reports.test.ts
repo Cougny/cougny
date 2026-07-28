@@ -1,22 +1,15 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import type { FastifyInstance } from 'fastify';
+import { createDbDouble } from '../test/db-double.js';
 
 const findUnique = vi.fn();
 const create = vi.fn();
 
-vi.mock('@cougny/db', () => ({
-  prisma: {
-    call: { findUnique },
-    report: { create },
-  },
-  ReportReason: {
-    NUDITY: 'NUDITY',
-    HARASSMENT: 'HARASSMENT',
-    MINOR: 'MINOR',
-    SPAM: 'SPAM',
-    OTHER: 'OTHER',
-  },
-}));
+vi.mock('@cougny/db', () =>
+  createDbDouble({
+    prisma: { call: { findUnique }, report: { create } },
+  }),
+);
 
 const CALL = { id: 'call-1', peerAId: 'session-a', peerBId: 'session-b' };
 
