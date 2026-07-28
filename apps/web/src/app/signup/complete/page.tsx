@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { isAtLeastMinimumAge, type CountryCode } from '@cougny/protocol';
-import { SiteHeader } from '@/components/SiteHeader';
+import { AuthBackdrop } from '@/components/auth/AuthBackdrop';
+import { AuthShell } from '@/components/auth/AuthShell';
 import { useAuth } from '@/components/auth/AuthProvider';
 import { CountrySelect } from '@/components/auth/CountrySelect';
 import { DateOfBirthField } from '@/components/auth/DateOfBirthField';
@@ -43,12 +44,9 @@ export default function CompleteProfilePage(): React.ReactElement {
     else if (status === 'authenticated' && user?.profileComplete) router.replace('/');
   }, [status, user, router]);
 
+  // Mid-redirect: the backdrop alone, so the hand-off is not a white flash.
   if (status !== 'authenticated' || !token || !user || user.profileComplete) {
-    return (
-      <div className="flex min-h-dvh flex-col">
-        <SiteHeader />
-      </div>
-    );
+    return <AuthBackdrop />;
   }
 
   /*
@@ -99,94 +97,83 @@ export default function CompleteProfilePage(): React.ReactElement {
   };
 
   return (
-    <div className="flex min-h-dvh flex-col">
-      <SiteHeader />
+    <AuthShell title={t('completeTitle')} subtitle={t('completeSubtitle')}>
+      <form onSubmit={submit} className="space-y-4">
+        <FormError message={error} />
 
-      <main className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center px-6 py-12">
-        <h1 className="text-2xl font-bold tracking-tight text-neutral-900 dark:text-neutral-100">
-          {t('completeTitle')}
-        </h1>
-        <p className="pt-2 text-sm text-neutral-500 dark:text-neutral-400">
-          {t('completeSubtitle')}
-        </p>
+        <Field id="username" label={t('username')} hint={t('usernameHint')}>
+          <TextInput
+            id="username"
+            name="username"
+            autoComplete="username"
+            required
+            minLength={3}
+            maxLength={20}
+            pattern="[A-Za-z0-9_]+"
+            value={username}
+            disabled={pending}
+            onChange={(event) => setTypedUsername(event.target.value)}
+          />
+        </Field>
 
-        <form onSubmit={submit} className="space-y-4 pt-8">
-          <FormError message={error} />
+        <Field id="dateOfBirth" label={t('dateOfBirth')} hint={t('ageRequirementHint')}>
+          <DateOfBirthField
+            id="dateOfBirth"
+            value={dateOfBirth}
+            disabled={pending}
+            onChange={setDateOfBirth}
+          />
+        </Field>
 
-          <Field id="username" label={t('username')} hint={t('usernameHint')}>
-            <TextInput
-              id="username"
-              name="username"
-              autoComplete="username"
-              required
-              minLength={3}
-              maxLength={20}
-              pattern="[A-Za-z0-9_]+"
-              value={username}
-              disabled={pending}
-              onChange={(event) => setTypedUsername(event.target.value)}
-            />
-          </Field>
+        <Field id="country" label={t('country')}>
+          <CountrySelect
+            id="country"
+            value={country}
+            required
+            disabled={pending}
+            onChange={setCountry}
+          />
+        </Field>
 
-          <Field id="dateOfBirth" label={t('dateOfBirth')} hint={t('ageRequirementHint')}>
-            <DateOfBirthField
-              id="dateOfBirth"
-              value={dateOfBirth}
-              disabled={pending}
-              onChange={setDateOfBirth}
-            />
-          </Field>
+        <label className="flex cursor-pointer items-start gap-3 pt-2">
+          <input
+            type="checkbox"
+            checked={acceptedTerms}
+            disabled={pending}
+            onChange={(event) => setAcceptedTerms(event.target.checked)}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand"
+          />
+          <span className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
+            {t.rich('acceptTerms', {
+              terms: (chunks) => (
+                <Link href="/terms" className="font-medium text-brand hover:underline">
+                  {chunks}
+                </Link>
+              ),
+            })}
+          </span>
+        </label>
 
-          <Field id="country" label={t('country')}>
-            <CountrySelect
-              id="country"
-              value={country}
-              required
-              disabled={pending}
-              onChange={setCountry}
-            />
-          </Field>
+        <label className="flex cursor-pointer items-start gap-3">
+          <input
+            type="checkbox"
+            checked={acceptedConduct}
+            disabled={pending}
+            onChange={(event) => {
+              setAcceptedConduct(event.target.checked);
+              setError(null);
+            }}
+            className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand"
+          />
+          <span className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
+            {t('acceptConduct')}
+          </span>
+        </label>
 
-          <label className="flex cursor-pointer items-start gap-3 pt-2">
-            <input
-              type="checkbox"
-              checked={acceptedTerms}
-              disabled={pending}
-              onChange={(event) => setAcceptedTerms(event.target.checked)}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand"
-            />
-            <span className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
-              {t.rich('acceptTerms', {
-                terms: (chunks) => (
-                  <Link href="/terms" className="font-medium text-brand hover:underline">
-                    {chunks}
-                  </Link>
-                ),
-              })}
-            </span>
-          </label>
-
-          <label className="flex cursor-pointer items-start gap-3">
-            <input
-              type="checkbox"
-              checked={acceptedConduct}
-              disabled={pending}
-              onChange={(event) => {
-                setAcceptedConduct(event.target.checked);
-                setError(null);
-              }}
-              className="mt-0.5 h-4 w-4 shrink-0 rounded accent-brand"
-            />
-            <span className="text-xs leading-relaxed text-neutral-600 dark:text-neutral-400">
-              {t('acceptConduct')}
-            </span>
-          </label>
-
-          <SubmitButton pending={pending} disabled={!complete}>
-            {t('finishSetup')}
-          </SubmitButton>
-        </form>
-      </main>
-    </div>
+        <SubmitButton pending={pending} disabled={!complete}>
+          {t('finishSetup')}
+        </SubmitButton>
+      </form>
+    </AuthShell>
   );
 }

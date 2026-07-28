@@ -1,9 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { OAuthProvider } from '@cougny/protocol';
-import { fetchCapabilities, startOAuth } from '@/lib/auth';
+import { startOAuth } from '@/lib/auth';
+import { useOAuthProviders } from '@/hooks/useOAuthProviders';
 import { DiscordIcon, GoogleIcon } from '@/components/icons';
 
 const PROVIDER_ICONS: Record<OAuthProvider, (props: { className?: string }) => React.ReactElement> =
@@ -36,26 +37,10 @@ export function SocialButtons({
   onError,
 }: SocialButtonsProps): React.ReactElement | null {
   const t = useTranslations('account');
-  const [providers, setProviders] = useState<OAuthProvider[] | null>(null);
+  const providers = useOAuthProviders();
   const [pending, setPending] = useState<OAuthProvider | null>(null);
 
-  useEffect(() => {
-    let cancelled = false;
-    void fetchCapabilities()
-      .then((capabilities) => {
-        if (!cancelled) setProviders(capabilities.oauthProviders);
-      })
-      .catch(() => {
-        // Offering nothing is the safe failure: a button that cannot work is
-        // worse than no button.
-        if (!cancelled) setProviders([]);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const available = (providers ?? []).filter((provider) => !exclude.includes(provider));
+  const available = providers.filter((provider) => !exclude.includes(provider));
   if (available.length === 0) return null;
 
   const begin = (provider: OAuthProvider): void => {

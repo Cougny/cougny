@@ -114,8 +114,23 @@ export async function logout(): Promise<void> {
   await request('/v1/auth/logout', { method: 'POST' });
 }
 
+/*
+ * Capabilities are fixed for the life of a deployment, so the in-flight promise
+ * is shared: several components can ask on the same screen and still cost one
+ * request. A failure clears the cache so the next asker retries rather than
+ * inheriting a permanent "nothing is configured".
+ */
+let capabilities: Promise<AuthCapabilitiesResponse> | null = null;
+
 export async function fetchCapabilities(): Promise<AuthCapabilitiesResponse> {
-  return AuthCapabilitiesResponseSchema.parse(await request('/v1/auth/capabilities'));
+  capabilities ??= (async () =>
+    AuthCapabilitiesResponseSchema.parse(await request('/v1/auth/capabilities')))().catch(
+    (error: unknown) => {
+      capabilities = null;
+      throw error;
+    },
+  );
+  return capabilities;
 }
 
 /* -------------------------------------------------------------------------- *
