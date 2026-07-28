@@ -102,21 +102,72 @@ the secrets below — `doppler secrets set` or the dashboard, either works.
 | `API_DOMAIN`                | `api.cougny.com`                         |
 | `SIGNALING_DOMAIN`          | `signaling.cougny.com`                   |
 | `ACME_EMAIL`                | `ops@cougny.com` (Let's Encrypt contact) |
+| `WEB_APP_URL`               | `https://cougny.com`                     |
+| `API_PUBLIC_URL`            | `https://api.cougny.com`                 |
+| `SMTP_URL`                  | See [Transactional mail](#mail) below    |
+
+`WEB_APP_URL` and `API_PUBLIC_URL` are what emailed links and OAuth
+`redirect_uri` values are built from, so they must be the real public origins —
+not the internal service names.
 
 ### Optional (defaults shown)
 
-| Secret                | Default  | Purpose                            |
-| --------------------- | -------- | ---------------------------------- |
-| `POSTGRES_USER`       | `cougny` | Database role                      |
-| `POSTGRES_DB`         | `cougny` | Database name                      |
-| `TURN_CREDENTIAL_TTL` | `86400`  | Minted TURN credential TTL (s)     |
-| `TURN_MIN_PORT`       | `49160`  | Relay range lower bound            |
-| `TURN_MAX_PORT`       | `49400`  | Relay range upper bound            |
-| `SIGNALING_MAX_QUEUE` | `10000`  | Matchmaking queue backpressure cap |
+| Secret                        | Default                        | Purpose                                                      |
+| ----------------------------- | ------------------------------ | ------------------------------------------------------------ |
+| `POSTGRES_USER`               | `cougny`                       | Database role                                                |
+| `POSTGRES_DB`                 | `cougny`                       | Database name                                                |
+| `TURN_CREDENTIAL_TTL`         | `86400`                        | Minted TURN credential TTL (s)                               |
+| `TURN_MIN_PORT`               | `49160`                        | Relay range lower bound                                      |
+| `TURN_MAX_PORT`               | `49400`                        | Relay range upper bound                                      |
+| `SIGNALING_MAX_QUEUE`         | `10000`                        | Matchmaking queue backpressure cap                           |
+| `MAIL_FROM`                   | `Cougny <no-reply@cougny.com>` | Sender address on account mail                               |
+| `AUTH_COOKIE_DOMAIN`          | _(unset)_                      | Set to `.cougny.com` so the refresh cookie spans subdomains  |
+| `AUTH_ACCESS_TOKEN_TTL`       | `900`                          | Access-token lifetime (s)                                    |
+| `AUTH_REFRESH_TOKEN_TTL`      | `2592000`                      | Refresh-token lifetime (s) — how long "stay signed in" lasts |
+| `GOOGLE_OAUTH_CLIENT_ID`      | _(unset)_                      | Google sign-in; the button appears only when both are set    |
+| `GOOGLE_OAUTH_CLIENT_SECRET`  | _(unset)_                      | ↑                                                            |
+| `DISCORD_OAUTH_CLIENT_ID`     | _(unset)_                      | Discord sign-in; same pairing rule                           |
+| `DISCORD_OAUTH_CLIENT_SECRET` | _(unset)_                      | ↑                                                            |
+| `WEBAUTHN_RP_ID`              | hostname of `WEB_APP_URL`      | Passkey relying party id — right by default                  |
+| `WEBAUTHN_RP_NAME`            | `Cougny`                       | Name shown in the platform's passkey prompt                  |
 
-Then authenticate the host with a **service token** scoped to that config
-(read-only, revocable — never use a personal token on a server). The token
-belongs to the `deploy` user, scoped to the app directory:
+Each OAuth provider's redirect URI is
+`<API_PUBLIC_URL>/v1/auth/oauth/<provider>/callback`, and must be registered
+with the provider exactly as written.
+
+### <a id="mail"></a>Transactional mail
+
+Email verification and password reset are the only mail the app sends, both
+over plain SMTP via nodemailer ([`mailer.ts`](../apps/api/src/auth/mailer.ts)) —
+so any provider with an SMTP endpoint works. `SMTP_URL` is **required** in
+production: the compose file refuses to interpolate without it, which fails the
+deploy rather than letting an account system ship with no way to reach users.
+
+With [Resend](https://resend.com), create an API key and use its SMTP bridge —
+the username is the literal string `resend`, the password is the key:
+
+```
+SMTP_URL=smtp://resend:re_YOUR_API_KEY@smtp.resend.com:587
+```
+
+Port 587 is STARTTLS; 465 works for implicit TLS if outbound 587 is blocked.
+
+`MAIL_FROM` must be an address on a domain **verified in Resend** — the DNS
+records they issue for it have to resolve before anything sends. An unverified
+sender is rejected at send time, which surfaces as a `failed to send mail` line
+in the API log while registration itself still returns 200 (delivery failures
+are deliberately non-fatal, so a dead mail provider cannot break sign-up).
+
+Leaving `SMTP_URL` unset writes each message to the log instead of sending it.
+That is the intended local-development mode — verification links stay reachable
+without a mail server — and `GET /v1/auth/capabilities` reports which mode a
+deployment is in.
+
+### Authenticate the host
+
+With the secrets in place, authenticate the host with a **service token**
+scoped to that config (read-only, revocable — never use a personal token on a
+server). The token belongs to the `deploy` user, scoped to the app directory:
 
 ```bash
 # Dashboard: project → config → Access → Generate Service Token
@@ -236,5 +287,6 @@ Redis is ephemeral by design and needs no backup.
 | Site unreachable / cert errors      | `docker compose logs caddy` — DNS must resolve to the host before ACME can issue.                                            |
 | `up` fails with "required variable" | The named secret is missing in the Doppler config.                                                                           |
 | Calls connect on wifi, fail on LTE  | TURN problem: relay range open in firewall? `TURN_URL` resolves to the host? `docker compose logs coturn`.                   |
+| Account emails never arrive         | `docker compose logs api` for `failed to send mail` — usually `MAIL_FROM` is on a domain the provider hasn't verified.       |
 | Camera prompt never appears         | Page not on HTTPS — check you're hitting Caddy, not a raw port.                                                              |
 | API/signaling unhealthy             | `docker compose logs api signaling` — usually a bad `DATABASE_URL` or unapplied migrations.                                  |
