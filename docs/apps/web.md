@@ -49,7 +49,7 @@ const {
   localStream,
   remoteStream,
   roomId,
-  peerId, // the peer's anonymous session id (used for reports)
+  peerId, // the peer's call-session id (used for reports)
   chatMessages,
   start,
   next,
@@ -61,7 +61,8 @@ const {
 Responsibilities:
 
 1. `getUserMedia` for camera/mic (started by an explicit user gesture).
-2. Bootstrap an anonymous session and fetch ICE servers.
+2. Bootstrap a call session with the signed-in account's access token, and
+   fetch ICE servers.
 3. Open the signaling socket (authenticated with the session token) and join
    the queue with the stored match preferences.
 4. On `matched`, create the `RTCPeerConnection` and run **perfect negotiation**
@@ -71,6 +72,43 @@ Responsibilities:
 6. Ride out transient ICE drops: a `reconnecting` grace period and one ICE
    restart before declaring `peer-left`.
 7. Clean up media/sockets on unmount.
+
+## Accounts
+
+[`AuthProvider`](../../apps/web/src/components/auth/AuthProvider.tsx) wraps the
+app and is the only place the account lives. Two rules shape it:
+
+- **The access token is held in React state and nowhere else** — not
+  `localStorage`, not a readable cookie. It is short-lived and replaced from the
+  httpOnly refresh cookie, so a reload re-authenticates silently while an
+  injected script has no durable credential to steal.
+- **One refresh on mount decides everything.** A `401` there is simply a
+  signed-out visitor. Until it resolves the UI shows nothing account-shaped,
+  because flashing "Sign in" at someone already signed in reads as a bug.
+
+Routes: `/login`, `/signup`, `/signup/complete` (what a social provider could
+not supply), `/account`, `/forgot-password`, `/reset-password`, `/verify-email`,
+and `/auth/callback` (where a social sign-in lands — it trades the refresh
+cookie for a token rather than accepting one from the URL, keeping the
+credential out of browser history and `Referer`).
+
+The home page is gated: without a complete account it shows
+[`SignInGate`](../../apps/web/src/components/auth/SignInGate.tsx) instead of the
+call stage. That is presentation only — `POST /v1/sessions` enforces the same
+rule server-side.
+
+### Country and date of birth
+
+[`CountrySelect`](../../apps/web/src/components/auth/CountrySelect.tsx) renders
+all 195 UN-recognized countries from `UN_COUNTRY_CODES`. It stores **codes
+only**: names come from `Intl.DisplayNames` in the active locale and are sorted
+with `Intl.Collator`, so the list is translated by the platform rather than by
+195 entries per language in a message file.
+
+[`DateOfBirthField`](../../apps/web/src/components/auth/DateOfBirthField.tsx)
+sets `max` to the latest date that clears 18, so the browser will not offer a
+failing one — a kinder way to state the rule than rejecting a submission. The
+enforcement is still the server's.
 
 ## <a id="i18n"></a>Internationalization
 

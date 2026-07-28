@@ -63,7 +63,7 @@ src/
 - On a match, the hub creates a room, **persists a `Call` row** (room id + both
   session ids — later used to validate reports), assigns exactly one peer the
   **`polite`** role, and sends each side a `matched` message carrying the
-  peer's anonymous session id. When the room ends, the row gets `endedAt` and
+  peer's call-session id. When the room ends, the row gets `endedAt` and
   an end reason. Persistence is fire-and-forget: a database hiccup never blocks
   live signaling.
 

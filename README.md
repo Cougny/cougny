@@ -18,7 +18,7 @@ rewritten) independently.
 ```
 apps/
   web/         Next.js (App Router, TypeScript, Tailwind, next-intl) — user client
-  api/         Fastify HTTP API — anonymous sessions, TURN credentials, reports
+  api/         Fastify HTTP API — accounts, call sessions, TURN credentials, reports
   signaling/   WebSocket signaling + FIFO matchmaking (ws)
 packages/
   protocol/          Zod-typed signaling + REST contracts (shared source of truth)
@@ -30,13 +30,16 @@ infra/         docker-compose: PostgreSQL, Redis, coturn (self-hosted TURN/STUN)
 
 ### How a call is established
 
-1. The web client creates an anonymous **session** (`POST /v1/sessions`) and
-   stores the returned token.
-2. It fetches **ICE servers** (`GET /v1/ice-servers`) — STUN plus short-lived
+1. The user **signs in** — email/password, Google, Discord, or a passkey. An
+   account is required to call: it carries the 18+ attestation and gives
+   moderation something durable to act on.
+2. The web client creates a **call session** (`POST /v1/sessions`) with that
+   access token. Peers only ever see its random id, never the account behind it.
+3. It fetches **ICE servers** (`GET /v1/ice-servers`) — STUN plus short-lived
    TURN credentials minted by the API from coturn's shared secret.
-3. It opens a **signaling** socket and joins the queue. The signaling server
+4. It opens a **signaling** socket and joins the queue. The signaling server
    pairs it with another waiting peer and assigns perfect-negotiation roles.
-4. The two browsers exchange SDP/ICE through the signaling relay and then talk
+5. The two browsers exchange SDP/ICE through the signaling relay and then talk
    **directly, peer-to-peer**. No media touches our servers.
 
 ### Why custom over managed APIs

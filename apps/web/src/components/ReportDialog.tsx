@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useTranslations } from 'next-intl';
 import type { CreateReportRequest } from '@cougny/protocol';
 import { createReport, ensureSession } from '@/lib/api';
+import { useAuth } from '@/components/auth/AuthProvider';
 import { SpinnerIcon } from '@/components/icons';
 
 type ReportReason = CreateReportRequest['reason'];
@@ -34,6 +35,8 @@ export function ReportDialog({
   onSubmitted,
 }: ReportDialogProps): React.ReactElement {
   const t = useTranslations('report');
+  // Reporting happens mid-call, so an account is always present by then.
+  const { token } = useAuth();
   const [reason, setReason] = useState<ReportReason | null>(null);
   const [details, setDetails] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -55,7 +58,8 @@ export function ReportDialog({
     setFailed(false);
     void (async () => {
       try {
-        const session = await ensureSession();
+        if (!token) throw new Error('An account is required to file a report.');
+        const session = await ensureSession(token);
         await createReport(session.token, {
           roomId,
           reportedPeerId: peerId,

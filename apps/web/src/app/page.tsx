@@ -7,8 +7,9 @@ import { VideoView } from '@/components/VideoView';
 import { ChatPanel } from '@/components/ChatPanel';
 import { MatchControls } from '@/components/MatchControls';
 import { ReportDialog } from '@/components/ReportDialog';
-import { ThemeToggle } from '@/components/ThemeToggle';
-import { WelcomeDialog, useWelcomeAccepted } from '@/components/WelcomeDialog';
+import { SiteHeader } from '@/components/SiteHeader';
+import { SignInGate } from '@/components/auth/SignInGate';
+import { useAuth } from '@/components/auth/AuthProvider';
 import {
   CameraIcon,
   CameraOffIcon,
@@ -24,6 +25,7 @@ const REPORT_TOAST_MS = 4000;
 export default function HomePage(): React.ReactElement {
   const t = useTranslations('call');
   const tReport = useTranslations('report');
+  const { status: authStatus, user } = useAuth();
   const call = useRandomCall();
 
   // Snapshot the call identifiers when the dialog opens, so the report still
@@ -31,7 +33,13 @@ export default function HomePage(): React.ReactElement {
   const [reportTarget, setReportTarget] = useState<{ roomId: string; peerId: string } | null>(null);
   const [reportThanks, setReportThanks] = useState(false);
   const [chatOpen, setChatOpen] = useState(false);
-  const [welcomeAccepted, setWelcomeAccepted] = useState(useWelcomeAccepted());
+
+  /**
+   * Calling requires a usable account: signed in, and past the completion step
+   * that records the 18+ attestation. Both are checked again server-side — this
+   * only decides what the page shows.
+   */
+  const canCall = authStatus === 'authenticated' && user?.profileComplete === true;
 
   useEffect(() => {
     if (!reportThanks) return;
@@ -83,9 +91,20 @@ export default function HomePage(): React.ReactElement {
     );
   };
 
+  // Signed-out visitors get the sign-in invitation instead of the call stage;
+  // there is nothing here they could use yet.
+  if (!canCall) {
+    return (
+      <div className="flex h-dvh flex-col">
+        <SiteHeader />
+        <SignInGate status={authStatus} profileComplete={user?.profileComplete ?? false} />
+      </div>
+    );
+  }
+
   return (
-    <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
-      {!welcomeAccepted && <WelcomeDialog onAccept={() => setWelcomeAccepted(true)} />}
+    <main className="grid h-dvh grid-rows-[auto_1fr_auto] sm:grid-rows-[auto_70fr_30fr]">
+      <SiteHeader />
 
       {/* Video stage: fills remaining space. */}
       <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
@@ -206,9 +225,6 @@ export default function HomePage(): React.ReactElement {
           onPreferencesChange={call.updatePreferences}
         />
       </div>
-
-      {/* Floating theme toggle — same size & column as chat button. */}
-      <ThemeToggle />
 
       {/* Floating chat button — always clickable. */}
       <button

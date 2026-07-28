@@ -1,7 +1,15 @@
 // Cougny database schema.
-// Kept intentionally small for the MVP: anonymous sessions, a record of each
-// call for safety/rate-limiting, and moderation reports. Accounts can be added
-// later without reshaping these tables.
+//
+// Two layers that meet at `Session.userId`:
+//   * The call layer — pseudonymous call sessions, a record of each call for
+//     safety/rate-limiting, and moderation reports. Peers only ever see a
+//     session id, never the account behind it.
+//   * The account layer — optional `User` records with either a password or a
+//     linked social identity, refresh-token sessions, and an audit trail.
+//
+// A call always runs on a `Session`, which is attached to the `User` that
+// created it — so the call path never has to know anything about the account,
+// while every participant still resolves to one.
 
 generator client {
   provider = "prisma-client-js"
@@ -11,8 +19,8 @@ datasource db {
   provider = "postgresql"
 }
 
-/// An anonymous visitor session. Cougny starts without accounts; a session is
-/// created on first visit and authorizes the signaling socket and API calls.
+/// A call session: the pseudonymous identity a call runs on. Created before a
+/// user's first call and used to authorize the signaling socket and API calls.
 model Session {
   id        String   @id @default(cuid())
   createdAt DateTime @default(now())
@@ -23,12 +31,19 @@ model Session {
   userAgent String?
   locale    String?
 
+  /// The account that created this session. Always set for sessions minted
+  /// today; nullable so that deleting an account leaves its call and report
+  /// history intact rather than erasing evidence about other people.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
   callsAsA      Call[]   @relation("CallPeerA")
   callsAsB      Call[]   @relation("CallPeerB")
   reportsFiled  Report[] @relation("ReportReporter")
   reportsAgainst Report[] @relation("ReportReported")
 
   @@index([lastSeen])
+  @@index([userId])
 }
 
 enum CallEndReason {
@@ -91,4 +106,234 @@ model Report {
 
   @@index([status])
   @@index([reportedId])
+}
+
+/* -------------------------------------------------------------------------- *
+ * Accounts
+ * -------------------------------------------------------------------------- */
+
+enum UserRole {
+  USER
+  MODERATOR
+  ADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  BANNED
+}
+
+enum OAuthProvider {
+  GOOGLE
+  DISCORD
+}
+
+/// A registered Cougny account. Created either from an email/password pair or
+/// from a social identity; in the social case the profile is incomplete until
+/// the holder supplies the details the provider cannot give us (date of birth,
+/// country, terms acceptance).
+model User {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  /// Always stored lowercase so casing can never fork one person into two
+  /// accounts. Nullable because a provider may withhold it.
+  email           String?   @unique
+  emailVerifiedAt DateTime?
+
+  /// Argon2id digest. Null for accounts that only ever signed in socially.
+  passwordHash      String?
+  passwordChangedAt DateTime?
+
+  /// Public handle, stored lowercase and unique.
+  username    String? @unique
+  displayName String?
+  avatarUrl   String?
+
+  /// Calendar date, not an instant — a birthday has no timezone. The 18+ rule
+  /// is enforced against this on every write that sets it.
+  dateOfBirth DateTime? @db.Date
+  /// ISO 3166-1 alpha-2, restricted to UN-recognized countries by the API.
+  country     String?
+
+  role   UserRole   @default(USER)
+  status UserStatus @default(ACTIVE)
+
+  termsAcceptedAt DateTime?
+  /// When the content rules — no CSAM, exploitation, or illegal material — were
+  /// agreed to. Recorded separately from the general terms because this is the
+  /// attestation that matters if the account is ever the subject of a report or
+  /// a legal request.
+  conductAcceptedAt DateTime?
+  /// Null until date of birth, country, and terms acceptance are all on record.
+  /// Social sign-ups sit in this state between the callback and the completion
+  /// step; email sign-ups are complete on creation.
+  profileCompletedAt DateTime?
+
+  lastLoginAt DateTime?
+  /// Consecutive failed password attempts; reset on success. Drives lockout.
+  failedLoginAttempts Int       @default(0)
+  lockedUntil         DateTime?
+
+  oauthAccounts OAuthAccount[]
+  authSessions  AuthSession[]
+  authTokens    AuthToken[]
+  auditLogs     AuthAuditLog[]
+  passkeys      Passkey[]
+  sessions      Session[]
+
+  @@index([status])
+}
+
+/// A WebAuthn credential — a passkey. The private half never leaves the user's
+/// authenticator; we hold only the public key needed to check its signatures,
+/// which makes this table worthless to an attacker who steals it.
+model Passkey {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  /// The authenticator's credential id, base64url-encoded. Unique globally so
+  /// one authenticator cannot be registered against two accounts.
+  credentialId String @unique
+  /// COSE-encoded public key.
+  publicKey    Bytes
+  /// Signature counter. A value that fails to advance signals a cloned
+  /// authenticator, so it is checked and stored on every assertion.
+  counter      BigInt @default(0)
+  /// Transports the browser reported (usb, nfc, ble, internal, hybrid), stored
+  /// comma-separated and fed back as a hint on future ceremonies.
+  transports   String?
+  /// True for a multi-device (synced) passkey, false for a single-device one.
+  /// Surfaced in the UI because losing a single-device key locks the user out.
+  backedUp     Boolean @default(false)
+
+  /// User-supplied label, so a list of passkeys is recognizable.
+  name       String?
+  lastUsedAt DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+/// A social identity bound to an account. The provider pair is unique so one
+/// Google or Discord identity can never end up on two Cougny accounts, and a
+/// user can hold at most one identity per provider.
+model OAuthAccount {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  provider          OAuthProvider
+  /// The provider's immutable subject id — never the email, which can change
+  /// hands at the provider and would let an old address hijack an account.
+  providerAccountId String
+  /// Snapshot of the handle/email at link time, shown so a user can recognize
+  /// which identity is attached. Never used for lookup.
+  label             String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+/// One signed-in device, identified by a refresh token we only ever store
+/// hashed. Rotated on every refresh: the old row is revoked and a new one
+/// issued in the same `familyId`, so replaying a stolen token lands on a
+/// revoked row and the whole family is torn down.
+model AuthSession {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  /// SHA-256 of the refresh token. A database leak yields no usable tokens.
+  tokenHash String @unique
+  /// Shared by every rotation of the same login, so reuse detection can revoke
+  /// the entire chain rather than only the replayed link.
+  familyId  String
+
+  lastUsedAt DateTime  @default(now())
+  expiresAt  DateTime
+  revokedAt  DateTime?
+
+  ipHash    String?
+  userAgent String?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([familyId])
+  @@index([expiresAt])
+}
+
+enum AuthTokenPurpose {
+  EMAIL_VERIFICATION
+  PASSWORD_RESET
+}
+
+/// Single-use, expiring token delivered by email. Stored hashed for the same
+/// reason as refresh tokens: the row is a verifier, not a secret.
+model AuthToken {
+  id        String           @id @default(cuid())
+  createdAt DateTime         @default(now())
+  purpose   AuthTokenPurpose
+  tokenHash String           @unique
+  expiresAt DateTime
+  /// Set the first time the token is redeemed; a redeemed token is inert.
+  consumedAt DateTime?
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, purpose])
+  @@index([expiresAt])
+}
+
+enum AuthEvent {
+  REGISTERED
+  LOGIN_SUCCEEDED
+  LOGIN_FAILED
+  LOGGED_OUT
+  TOKEN_REFRESHED
+  TOKEN_REUSE_DETECTED
+  PASSWORD_CHANGED
+  PASSWORD_RESET_REQUESTED
+  PASSWORD_RESET_COMPLETED
+  EMAIL_VERIFIED
+  PROFILE_COMPLETED
+  PROFILE_UPDATED
+  OAUTH_LINKED
+  OAUTH_UNLINKED
+  PASSKEY_REGISTERED
+  PASSKEY_REMOVED
+  PASSKEY_LOGIN_SUCCEEDED
+  SESSION_REVOKED
+  ACCOUNT_DELETED
+}
+
+/// Append-only trail of security-relevant account events, so a user can be
+/// shown what happened to their account and moderation can reconstruct abuse.
+model AuthAuditLog {
+  id        String    @id @default(cuid())
+  createdAt DateTime  @default(now())
+  event     AuthEvent
+
+  ipHash    String?
+  userAgent String?
+  /// Small free-form context (provider name, revoked session id, …).
+  detail    String?
+
+  /// Nullable so a failed login for an unknown address can still be recorded,
+  /// and so the trail survives account deletion.
+  userId String?
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([event, createdAt])
 }

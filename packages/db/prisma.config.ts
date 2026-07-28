@@ -15,5 +15,12 @@ export default defineConfig({
   },
   datasource: {
     url: process.env.DATABASE_URL,
+    /**
+     * Scratch database Prisma replays the migration history into when it needs
+     * to know what the schema *should* look like — drift detection and
+     * `migrate diff --from-migrations`. Optional: when unset, Prisma creates and
+     * drops a temporary database on the same server.
+     */
+    shadowDatabaseUrl: process.env.SHADOW_DATABASE_URL,
   },
 });

@@ -10,8 +10,12 @@ export const HealthResponseSchema = z.object({
 export type HealthResponse = z.infer<typeof HealthResponseSchema>;
 
 /**
- * Anonymous session. Cougny starts fully anonymous (like the products it is
- * modeled on); the token authorizes the signaling socket and API calls.
+ * A call session: the pseudonymous identity a call runs on, and the token that
+ * authorizes the signaling socket and API calls.
+ *
+ * Minting one requires a signed-in account, so every participant carries an 18+
+ * attestation. The session id is all a peer ever learns — the account behind it
+ * is never exposed on the wire.
  */
 export const CreateSessionResponseSchema = z.object({
   sessionId: z.string(),

@@ -14,6 +14,7 @@
   },
   "dependencies": {
     "@cougny/protocol": "workspace:*",
+    "@simplewebauthn/browser": "^13.3.0",
     "next": "^16.2.10",
     "next-intl": "^4.13.1",
     "react": "^19.2.7",

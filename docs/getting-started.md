@@ -59,7 +59,7 @@ variables inline ([api](../apps/api/.env.example),
 | Variable                    | Used by        | Purpose                             |
 | --------------------------- | -------------- | ----------------------------------- |
 | `DATABASE_URL`              | api, db        | Postgres connection string.         |
-| `AUTH_JWT_SECRET`           | api            | Signs anonymous session tokens.     |
+| `AUTH_JWT_SECRET`           | api            | Root secret for all signed tokens.  |
 | `TURN_STATIC_AUTH_SECRET`   | api, coturn    | Shared secret for TURN credentials. |
 | `SIGNALING_ALLOWED_ORIGINS` | api, signaling | Browser origin allowlist.           |
 | `NEXT_PUBLIC_API_URL`       | web            | Where the browser reaches the API.  |
