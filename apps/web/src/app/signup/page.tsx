@@ -67,7 +67,7 @@ export default function SignUpPage(): React.ReactElement {
     void (async () => {
       try {
         await signUp({ email, username, password, dateOfBirth, country });
-        router.push('/');
+        router.push('/dashboard');
       } catch (err) {
         setError(
           err instanceof AuthError ? t(ERROR_KEYS[err.code] ?? 'signUpFailed') : t('signUpFailed'),

@@ -126,6 +126,59 @@ export function SpinnerIcon({ className }: IconProps): React.ReactElement {
   );
 }
 
+export function TrophyIcon({ className }: IconProps): React.ReactElement {
+  return (
+    <svg {...iconAttrs(className)}>
+      <path d="M7 4h10v5a5 5 0 0 1-10 0z" />
+      <path d="M7 6H4v1a4 4 0 0 0 3.4 4M17 6h3v1a4 4 0 0 1-3.4 4" />
+      <path d="M12 14v3m-3 4h6l-.6-2.4a1.5 1.5 0 0 0-1.5-1.1h-1.8a1.5 1.5 0 0 0-1.5 1.1z" />
+    </svg>
+  );
+}
+
+export function GameIcon({ className }: IconProps): React.ReactElement {
+  return (
+    <svg {...iconAttrs(className)}>
+      <path d="M7 8h10a5 5 0 0 1 4.9 4l.7 3.6A2.9 2.9 0 0 1 19.8 19c-1 0-1.9-.5-2.4-1.4L16.5 16h-9l-.9 1.6A2.8 2.8 0 0 1 4.2 19a2.9 2.9 0 0 1-2.8-3.4L2.1 12A5 5 0 0 1 7 8Z" />
+      <path d="M7 11v3m-1.5-1.5h3M16 12h.01M18 14h.01" />
+    </svg>
+  );
+}
+
+export function ShieldIcon({ className }: IconProps): React.ReactElement {
+  return (
+    <svg {...iconAttrs(className)}>
+      <path d="M12 2.5 20 5v6.2c0 4.9-3.3 8.6-8 10.3-4.7-1.7-8-5.4-8-10.3V5z" />
+      <path d="m9 12 2 2 4-4" />
+    </svg>
+  );
+}
+
+export function ChatIcon({ className }: IconProps): React.ReactElement {
+  return (
+    <svg {...iconAttrs(className)}>
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  );
+}
+
+export function BoltIcon({ className }: IconProps): React.ReactElement {
+  return (
+    <svg {...iconAttrs(className)}>
+      <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
+    </svg>
+  );
+}
+
+export function ArrowRightIcon({ className }: IconProps): React.ReactElement {
+  return (
+    <svg {...iconAttrs(className)}>
+      <line x1="4" y1="12" x2="19" y2="12" />
+      <polyline points="13 6 19 12 13 18" />
+    </svg>
+  );
+}
+
 /*
  * Brand marks below are drawn with their own fills rather than `currentColor`,
  * so `iconAttrs` (which sets a stroke) does not apply to them.

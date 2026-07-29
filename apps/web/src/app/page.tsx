@@ -1,353 +1,262 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import Link from 'next/link';
 import { useTranslations } from 'next-intl';
-import { useRandomCall, type CallStatus } from '@/hooks/useRandomCall';
-import { VideoView } from '@/components/VideoView';
-import { ChatPanel } from '@/components/ChatPanel';
-import { MatchControls } from '@/components/MatchControls';
-import { ReportDialog } from '@/components/ReportDialog';
+import { MarketingHeader } from '@/components/marketing/MarketingHeader';
+import { StagePreview } from '@/components/marketing/StagePreview';
 import { ThemeToggle } from '@/components/ThemeToggle';
-import { VideoPanel } from '@/components/VideoPanel';
-import { SignInGate } from '@/components/auth/SignInGate';
-import { AccountMenu } from '@/components/auth/AccountMenu';
 import { useAuth } from '@/components/auth/AuthProvider';
 import {
-  CameraIcon,
-  CameraOffIcon,
-  FlagIcon,
-  MicIcon,
-  MicOffIcon,
-  SpinnerIcon,
+  ArrowRightIcon,
+  BoltIcon,
+  ChatIcon,
+  GameIcon,
+  ShieldIcon,
+  TrophyIcon,
   UserIcon,
 } from '@/components/icons';
 
-const REPORT_TOAST_MS = 4000;
+/** Feature cards, in the order they read down the page. */
+const FEATURES = [
+  { id: 'instant', Icon: BoltIcon },
+  { id: 'private', Icon: ShieldIcon },
+  { id: 'filters', Icon: UserIcon },
+  { id: 'chat', Icon: ChatIcon },
+  { id: 'games', Icon: GameIcon },
+  { id: 'leaderboard', Icon: TrophyIcon },
+] as const;
 
-export default function HomePage(): React.ReactElement {
-  const t = useTranslations('call');
-  const tReport = useTranslations('report');
-  const { status: authStatus, user } = useAuth();
-  const call = useRandomCall();
+const STEPS = ['one', 'two', 'three'] as const;
 
-  // Snapshot the call identifiers when the dialog opens, so the report still
-  // targets the right room even if the peer leaves mid-form.
-  const [reportTarget, setReportTarget] = useState<{ roomId: string; peerId: string } | null>(null);
-  const [reportThanks, setReportThanks] = useState(false);
-  const [chatOpen, setChatOpen] = useState(false);
+/**
+ * cougny.com — what the product is, for people who do not have it yet.
+ *
+ * The app proper lives behind `/dashboard`; this page's whole job is to explain
+ * the thing and hand visitors to sign-up. Signed-in visitors get the same page
+ * with every call-to-action pointed at the dashboard instead, so the front door
+ * never asks someone to sign up twice.
+ */
+export default function LandingPage(): React.ReactElement {
+  const t = useTranslations('landing');
+  const tApp = useTranslations('app');
+  const tCall = useTranslations('call');
+  const tTerms = useTranslations('terms');
+  const { status } = useAuth();
 
-  /**
-   * Calling requires a usable account: signed in, and past the completion step
-   * that records the 18+ attestation. Both are checked again server-side — this
-   * only decides what the page shows.
-   */
-  const canCall = authStatus === 'authenticated' && user?.profileComplete === true;
-
-  useEffect(() => {
-    if (!reportThanks) return;
-    const timer = setTimeout(() => setReportThanks(false), REPORT_TOAST_MS);
-    return () => clearTimeout(timer);
-  }, [reportThanks]);
-
-  const renderStrangerOverlay = (): React.ReactElement => {
-    if (call.error) {
-      return (
-        <div className="space-y-4 px-6 text-center">
-          <p className="text-base text-neutral-600 dark:text-neutral-300">{t(call.error)}</p>
-          {call.error === 'permissionDenied' && (
-            <button
-              onClick={call.start}
-              className="rounded-full bg-brand px-6 py-2 font-semibold text-brand-fg transition hover:scale-105 hover:bg-brand-strong active:scale-95"
-            >
-              {t('permissionRetry')}
-            </button>
-          )}
-        </div>
-      );
-    }
-
-    if (call.status === 'idle') {
-      return (
-        <div className="flex flex-col items-center gap-3 px-6 text-center">
-          <UserIcon className="h-12 w-12 text-neutral-300 dark:text-neutral-600" />
-          <p className="text-base text-neutral-500 dark:text-neutral-400">{t('idleHint')}</p>
-        </div>
-      );
-    }
-
-    if (call.status === 'peer-left') {
-      return (
-        <p className="px-6 text-center text-base text-neutral-500 dark:text-neutral-400">
-          {t('peerLeft')}
-        </p>
-      );
-    }
-
-    return (
-      <div className="flex flex-col items-center gap-4 px-6 text-center">
-        <SpinnerIcon className="h-8 w-8 animate-spin text-brand" />
-        <p className="text-base text-neutral-500 dark:text-neutral-400">
-          {t(statusMessageKey(call.status))}
-        </p>
-      </div>
-    );
-  };
-
-  // Signed-out visitors get the sign-in card over a blurred stage instead of
-  // the stage itself; there is nothing here they could use yet. The gate brings
-  // its own header, so this branch does not add one.
-  if (!canCall) {
-    return <SignInGate status={authStatus} profileComplete={user?.profileComplete ?? false} />;
-  }
+  const signedIn = status === 'authenticated';
+  const primaryHref = signedIn ? '/dashboard' : '/signup';
+  const primaryLabel = signedIn ? t('navDashboard') : t('ctaPrimary');
 
   return (
-    <main className="grid h-dvh grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
-      {/* Video stage: fills remaining space. */}
-      <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
-        <VideoPanel label={t('you')}>
-          {call.localStream && call.cameraEnabled ? (
-            <VideoView
-              stream={call.localStream}
-              muted
-              mirrored
-              className="h-full w-full object-cover"
-            />
-          ) : (
-            <div className="flex h-full w-full flex-col items-center justify-center gap-3">
-              <UserIcon className="h-12 w-12 text-neutral-300 dark:text-neutral-600" />
-              {call.localStream && !call.cameraEnabled && (
-                <p className="text-sm text-neutral-500 dark:text-neutral-400">
-                  {t('cameraOffNote')}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Media toggles live on the self-view so the bottom strip stays block-only. */}
-          {call.localStream && (
-            <div className="absolute bottom-3 left-1/2 flex -translate-x-1/2 gap-2">
-              <MediaToggle
-                enabled={call.micEnabled}
-                label={t('toggleMic')}
-                onClick={call.toggleMic}
-                iconOn={<MicIcon className="h-4 w-4" />}
-                iconOff={<MicOffIcon className="h-4 w-4" />}
-              />
-              <MediaToggle
-                enabled={call.cameraEnabled}
-                label={t('toggleCamera')}
-                onClick={call.toggleCamera}
-                iconOn={<CameraIcon className="h-4 w-4" />}
-                iconOff={<CameraOffIcon className="h-4 w-4" />}
-              />
-            </div>
-          )}
-
-          {/* COUGNY watermark — top-left of self view. */}
-          <span className="pointer-events-none absolute left-3 top-3 z-10 font-display text-3xl text-neutral-400/50 select-none">
-            COUGNY
-          </span>
-        </VideoPanel>
-
-        <VideoPanel label={t('stranger')} live={call.status === 'connected'}>
-          {(() => {
-            const videoTracks = call.remoteStream?.getVideoTracks() ?? [];
-            const hasLiveVideo = videoTracks.some((t) => t.readyState === 'live');
-            if (call.remoteStream && hasLiveVideo) {
-              return (
-                <VideoView stream={call.remoteStream} className="h-full w-full object-cover" />
-              );
-            }
-            if (call.remoteStream && !hasLiveVideo) {
-              return (
-                <div className="flex h-full w-full items-center justify-center">
-                  <div className="flex flex-col items-center gap-3 px-6 text-center">
-                    <CameraOffIcon className="h-10 w-10 text-neutral-400 dark:text-neutral-500" />
-                    <p className="text-base text-neutral-500 dark:text-neutral-400">
-                      {t('remoteCameraOff')}
-                    </p>
-                  </div>
-                </div>
-              );
-            }
-            return (
-              <div className="flex h-full w-full items-center justify-center">
-                {renderStrangerOverlay()}
-              </div>
-            );
-          })()}
-
-          {call.status === 'connected' && call.roomId && call.peerId && (
-            <button
-              onClick={() => setReportTarget({ roomId: call.roomId!, peerId: call.peerId! })}
-              className="absolute right-3 top-3 flex items-center gap-1.5 rounded-full bg-neutral-950/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur transition hover:bg-red-600/90"
-            >
-              <FlagIcon className="h-3.5 w-3.5" />
-              {t('report')}
-            </button>
-          )}
-        </VideoPanel>
-      </div>
-
-      {reportTarget && (
-        <ReportDialog
-          roomId={reportTarget.roomId}
-          peerId={reportTarget.peerId}
-          onClose={() => setReportTarget(null)}
-          onSubmitted={() => {
-            setReportTarget(null);
-            setReportThanks(true);
-            call.next();
-          }}
-        />
-      )}
-
-      {reportThanks && (
-        <div
-          role="status"
-          className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2 rounded-full bg-neutral-900 px-5 py-2.5 text-sm font-medium text-neutral-50 shadow-2xl dark:bg-neutral-800 dark:text-neutral-100"
-        >
-          {tReport('thanks')}
-        </div>
-      )}
-
-      {/* Bottom: exactly 35% of screen. */}
-      <div className="overflow-visible border-t border-neutral-200/50 bg-neutral-100 dark:border-neutral-800 dark:bg-neutral-950">
-        <MatchControls
-          status={call.status}
-          onStart={call.start}
-          onSkip={call.next}
-          onStop={call.stop}
-          onPreferencesChange={call.updatePreferences}
-        />
-      </div>
-
+    <div className="relative min-h-dvh overflow-x-hidden">
       {/*
-       * The call screen carries no header. Its chrome is this stack in the
-       * bottom-right corner instead, reading upward from the thing you reach
-       * for most: chat, brightness, then the account.
+       * Ambient wash behind the hero only. It sits under the content and is
+       * clipped by the page, so nothing below the fold picks up a stray glow.
        */}
-      <AccountMenu floating />
-      <ThemeToggle />
-
-      {/* Floating chat button — always clickable. */}
-      <button
-        onClick={() => setChatOpen(!chatOpen)}
-        aria-label={t('chatToggle')}
-        className={`fixed bottom-4 right-4 z-40 flex h-12 w-12 items-center justify-center rounded-full shadow-lg transition hover:scale-105 active:scale-95 ${
-          call.status === 'connected'
-            ? 'bg-emerald-500 text-white hover:bg-emerald-600'
-            : 'bg-neutral-300 text-neutral-500 dark:bg-neutral-700 dark:text-neutral-400'
-        }`}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-x-0 top-0 -z-10 h-[720px] overflow-hidden"
       >
-        {chatOpen ? (
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            className="h-5 w-5"
-          >
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          <svg
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth={2}
-            className="h-5 w-5"
-          >
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        )}
-      </button>
+        <div className="absolute -top-40 left-1/2 h-[520px] w-[900px] -translate-x-1/2 rounded-full bg-brand/20 blur-[120px] dark:bg-brand/25" />
+        <div className="absolute -top-24 right-[8%] h-[360px] w-[420px] rounded-full bg-brand-accent/15 blur-[110px] dark:bg-brand-accent/20" />
+      </div>
 
-      {/* Floating chat window. */}
-      {chatOpen && (
-        <div className="fixed bottom-20 right-4 z-40 flex h-[60vh] max-h-[500px] w-[calc(100vw-2rem)] max-w-80 flex-col rounded-2xl border border-neutral-200 bg-white shadow-2xl dark:border-neutral-700 dark:bg-neutral-900 sm:w-96">
-          <div className="flex items-center justify-between border-b border-neutral-200 px-4 py-2.5 dark:border-neutral-700">
-            <span className="text-sm font-semibold text-neutral-900 dark:text-neutral-100">
-              {t('chat')}
+      <MarketingHeader />
+
+      <main>
+        {/* Hero. */}
+        <section className="mx-auto w-full max-w-6xl px-5 pb-8 pt-16 sm:px-8 sm:pb-14 sm:pt-24">
+          <div className="mx-auto max-w-3xl text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-neutral-300/70 bg-white/70 px-3.5 py-1.5 text-xs font-semibold uppercase tracking-wider text-neutral-600 backdrop-blur dark:border-neutral-700/70 dark:bg-neutral-900/70 dark:text-neutral-300">
+              <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-emerald-500" />
+              {t('badge')}
             </span>
-            <button
-              onClick={() => setChatOpen(false)}
-              aria-label={t('chatClose')}
-              className="rounded-full p-1 text-neutral-400 transition hover:bg-neutral-100 hover:text-neutral-600 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
-            >
-              <svg
-                viewBox="0 0 24 24"
-                fill="none"
-                stroke="currentColor"
-                strokeWidth={2}
-                className="h-4 w-4"
+
+            <h1 className="pt-7 text-4xl font-extrabold leading-[1.08] tracking-tight text-neutral-900 sm:text-6xl dark:text-white">
+              {t('heroTitle')}{' '}
+              <span className="bg-gradient-to-br from-brand to-brand-accent bg-clip-text text-transparent">
+                {t('heroTitleAccent')}
+              </span>
+            </h1>
+
+            <p className="mx-auto max-w-xl pt-6 text-base leading-relaxed text-neutral-600 sm:text-lg dark:text-neutral-300">
+              {t('heroBody')}
+            </p>
+
+            <div className="flex flex-col items-center justify-center gap-3 pt-9 sm:flex-row">
+              <Link
+                href={primaryHref}
+                className="group inline-flex w-full items-center justify-center gap-2 rounded-full bg-gradient-to-br from-brand to-brand-accent px-7 py-3.5 text-sm font-bold text-brand-fg shadow-[0_10px_28px_-8px_rgba(124,58,237,0.6)] transition hover:scale-[1.02] active:scale-[0.98] sm:w-auto"
               >
-                <line x1="18" y1="6" x2="6" y2="18" />
-                <line x1="6" y1="6" x2="18" y2="18" />
-              </svg>
-            </button>
+                {primaryLabel}
+                <ArrowRightIcon className="h-4 w-4 transition group-hover:translate-x-0.5" />
+              </Link>
+              <a
+                href="#how"
+                className="inline-flex w-full items-center justify-center rounded-full border border-neutral-300 bg-white/70 px-7 py-3.5 text-sm font-semibold text-neutral-700 backdrop-blur transition hover:bg-white active:scale-[0.98] sm:w-auto dark:border-neutral-700 dark:bg-neutral-900/70 dark:text-neutral-200 dark:hover:bg-neutral-900"
+              >
+                {t('ctaSecondary')}
+              </a>
+            </div>
+
+            <p className="pt-5 text-xs text-neutral-500 dark:text-neutral-400">{t('heroTrust')}</p>
           </div>
-          <div className="flex min-h-0 flex-1 flex-col">
-            {call.status === 'connected' ? (
-              <ChatPanel
-                messages={call.chatMessages}
-                ready={call.chatReady && call.status === 'connected'}
-                peerTyping={call.peerTyping}
-                onSend={call.sendChatMessage}
-                onTyping={call.sendTyping}
-              />
-            ) : (
-              <div className="flex flex-1 items-center justify-center px-4 text-center text-sm text-neutral-400 dark:text-neutral-500">
-                {t('chatWaiting')}
-              </div>
-            )}
+
+          {/* The product itself, shown rather than described. */}
+          <div className="pt-14 sm:pt-20">
+            <div className="mx-auto max-w-4xl rounded-3xl border border-neutral-200/80 bg-white/70 p-2 shadow-[0_30px_60px_-30px_rgba(15,23,42,0.45)] backdrop-blur-xl dark:border-neutral-800 dark:bg-neutral-900/60 dark:shadow-[0_30px_60px_-30px_rgba(0,0,0,0.9)]">
+              <StagePreview />
+            </div>
           </div>
+        </section>
+
+        {/* How it works. */}
+        <section id="how" className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+          <SectionHeading eyebrow={t('howEyebrow')} title={t('howTitle')} body={t('howBody')} />
+
+          <ol className="grid gap-5 pt-14 sm:grid-cols-3">
+            {STEPS.map((step, index) => (
+              <li
+                key={step}
+                className="rounded-2xl border border-neutral-200 bg-white p-7 shadow-sm dark:border-neutral-800 dark:bg-neutral-900"
+              >
+                <span className="flex h-10 w-10 items-center justify-center rounded-full bg-gradient-to-br from-brand to-brand-accent text-sm font-bold text-brand-fg">
+                  {index + 1}
+                </span>
+                <h3 className="pt-5 text-lg font-semibold tracking-tight text-neutral-900 dark:text-white">
+                  {t(`steps.${step}.title`)}
+                </h3>
+                <p className="pt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                  {t(`steps.${step}.body`)}
+                </p>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        {/* Features. */}
+        <section
+          id="features"
+          className="border-y border-neutral-200 bg-white dark:border-neutral-800 dark:bg-neutral-900/40"
+        >
+          <div className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+            <SectionHeading
+              eyebrow={t('featuresEyebrow')}
+              title={t('featuresTitle')}
+              body={t('featuresBody')}
+            />
+
+            <div className="grid gap-5 pt-14 sm:grid-cols-2 lg:grid-cols-3">
+              {FEATURES.map(({ id, Icon }) => (
+                <article
+                  key={id}
+                  className="rounded-2xl border border-neutral-200 bg-neutral-50/70 p-7 transition hover:border-brand/40 hover:shadow-[0_12px_30px_-18px_rgba(124,58,237,0.55)] dark:border-neutral-800 dark:bg-neutral-950/40"
+                >
+                  <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-brand/10 text-brand dark:bg-brand/15 dark:text-violet-300">
+                    <Icon className="h-5 w-5" />
+                  </span>
+                  <h3 className="pt-5 text-base font-semibold tracking-tight text-neutral-900 dark:text-white">
+                    {t(`features.${id}.title`)}
+                  </h3>
+                  <p className="pt-2 text-sm leading-relaxed text-neutral-600 dark:text-neutral-400">
+                    {t(`features.${id}.body`)}
+                  </p>
+                </article>
+              ))}
+            </div>
+          </div>
+        </section>
+
+        {/* Safety. The one section that speaks plainly rather than selling. */}
+        <section id="safety" className="mx-auto w-full max-w-6xl px-5 py-20 sm:px-8 sm:py-28">
+          <div className="grid items-center gap-10 rounded-3xl border border-neutral-200 bg-white p-8 sm:p-12 lg:grid-cols-[auto_1fr] dark:border-neutral-800 dark:bg-neutral-900">
+            <span className="flex h-14 w-14 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+              <ShieldIcon className="h-7 w-7" />
+            </span>
+            <div>
+              <h2 className="text-2xl font-bold tracking-tight text-neutral-900 sm:text-3xl dark:text-white">
+                {t('safetyTitle')}
+              </h2>
+              <p className="max-w-2xl pt-3 text-sm leading-relaxed text-neutral-600 dark:text-neutral-300">
+                {tCall('adultsOnlyNotice')}
+              </p>
+              <Link
+                href="/terms"
+                className="inline-flex items-center gap-1.5 pt-5 text-sm font-semibold text-brand transition hover:gap-2.5 dark:text-violet-300"
+              >
+                {t('safetyLink')}
+                <ArrowRightIcon className="h-4 w-4" />
+              </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Closing call to action. */}
+        <section className="mx-auto w-full max-w-6xl px-5 pb-24 sm:px-8 sm:pb-32">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-brand to-brand-accent px-8 py-16 text-center sm:px-12 sm:py-20">
+            <div
+              aria-hidden
+              className="pointer-events-none absolute -right-20 -top-24 h-72 w-72 rounded-full bg-white/15 blur-3xl"
+            />
+            <h2 className="relative text-3xl font-extrabold tracking-tight text-white sm:text-4xl">
+              {t('finalTitle')}
+            </h2>
+            <p className="relative mx-auto max-w-lg pt-4 text-sm leading-relaxed text-white/85 sm:text-base">
+              {t('finalBody')}
+            </p>
+            <Link
+              href={primaryHref}
+              className="relative mt-9 inline-flex items-center gap-2 rounded-full bg-white px-8 py-3.5 text-sm font-bold text-neutral-900 shadow-lg transition hover:scale-[1.02] active:scale-[0.98]"
+            >
+              {primaryLabel}
+              <ArrowRightIcon className="h-4 w-4" />
+            </Link>
+          </div>
+        </section>
+      </main>
+
+      <footer className="border-t border-neutral-200 dark:border-neutral-800">
+        <div className="mx-auto flex w-full max-w-6xl flex-col items-center justify-between gap-5 px-5 py-9 sm:flex-row sm:px-8">
+          <span className="font-display text-xl uppercase leading-none tracking-wide text-neutral-500 dark:text-neutral-400">
+            {tApp('name')}
+          </span>
+          <div className="flex items-center gap-6 text-sm text-neutral-500 dark:text-neutral-400">
+            <Link href="/terms" className="transition hover:text-neutral-900 dark:hover:text-white">
+              {tTerms('title')}
+            </Link>
+            <Link href="/login" className="transition hover:text-neutral-900 dark:hover:text-white">
+              {t('navDashboard')}
+            </Link>
+          </div>
+          <p className="text-xs text-neutral-400 dark:text-neutral-500">{t('footerNote')}</p>
         </div>
-      )}
-    </main>
+      </footer>
+
+      <ThemeToggle />
+    </div>
   );
 }
 
-function statusMessageKey(status: CallStatus): string {
-  switch (status) {
-    case 'searching':
-      return 'searching';
-    case 'reconnecting':
-      return 'reconnecting';
-    case 'peer-left':
-      return 'peerLeft';
-    default:
-      return 'connecting';
-  }
-}
-
-function MediaToggle({
-  enabled,
-  label,
-  onClick,
-  iconOn,
-  iconOff,
+function SectionHeading({
+  eyebrow,
+  title,
+  body,
 }: {
-  enabled: boolean;
-  label: string;
-  onClick: () => void;
-  iconOn: React.ReactNode;
-  iconOff: React.ReactNode;
+  eyebrow: string;
+  title: string;
+  body: string;
 }): React.ReactElement {
   return (
-    <button
-      onClick={onClick}
-      aria-pressed={!enabled}
-      aria-label={label}
-      title={label}
-      className={`flex h-9 w-9 items-center justify-center rounded-full backdrop-blur transition hover:scale-105 active:scale-95 ${
-        enabled
-          ? 'bg-neutral-950/60 text-white hover:bg-neutral-800/80'
-          : 'bg-red-600/90 text-white hover:bg-red-500'
-      }`}
-    >
-      {enabled ? iconOn : iconOff}
-    </button>
+    <div className="mx-auto max-w-2xl text-center">
+      <span className="text-xs font-bold uppercase tracking-[0.18em] text-brand dark:text-violet-300">
+        {eyebrow}
+      </span>
+      <h2 className="pt-4 text-3xl font-bold tracking-tight text-neutral-900 sm:text-4xl dark:text-white">
+        {title}
+      </h2>
+      <p className="pt-4 text-base leading-relaxed text-neutral-600 dark:text-neutral-300">
+        {body}
+      </p>
+    </div>
   );
 }

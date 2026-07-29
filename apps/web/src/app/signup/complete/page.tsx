@@ -41,7 +41,7 @@ export default function CompleteProfilePage(): React.ReactElement {
   useEffect(() => {
     if (status === 'anonymous') router.replace('/login');
     // Nothing left to complete: send them on rather than showing a dead form.
-    else if (status === 'authenticated' && user?.profileComplete) router.replace('/');
+    else if (status === 'authenticated' && user?.profileComplete) router.replace('/dashboard');
   }, [status, user, router]);
 
   // Mid-redirect: the backdrop alone, so the hand-off is not a white flash.
@@ -82,7 +82,7 @@ export default function CompleteProfilePage(): React.ReactElement {
             acceptedConduct: true,
           }),
         );
-        router.push('/');
+        router.push('/dashboard');
       } catch (err) {
         setError(
           err instanceof AuthError && err.code === 'username_taken'

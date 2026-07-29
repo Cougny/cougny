@@ -30,7 +30,7 @@ export default function OAuthCallbackPage(): React.ReactElement {
       router.replace('/login?error=provider_error');
       return;
     }
-    router.replace(user?.profileComplete ? '/' : '/signup/complete');
+    router.replace(user?.profileComplete ? '/dashboard' : '/signup/complete');
   }, [status, user, router]);
 
   return (

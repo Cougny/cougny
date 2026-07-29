@@ -29,6 +29,7 @@ interface AccountMenuProps {
  */
 export function AccountMenu({ floating = false }: AccountMenuProps): React.ReactElement | null {
   const t = useTranslations('account');
+  const tLanding = useTranslations('landing');
   const router = useRouter();
   const { status, user, signOut } = useAuth();
   const [open, setOpen] = useState(false);
@@ -122,6 +123,15 @@ export function AccountMenu({ floating = false }: AccountMenuProps): React.React
               {t('finishSetup')}
             </Link>
           )}
+          {/* The call screen has no header, so this is the only way back out of it. */}
+          <Link
+            href="/dashboard"
+            role="menuitem"
+            onClick={() => setOpen(false)}
+            className="block px-4 py-2 text-sm text-neutral-700 transition hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-800"
+          >
+            {tLanding('navDashboard')}
+          </Link>
           <Link
             href="/account"
             role="menuitem"

@@ -7,6 +7,114 @@
     "switchToDark": "Switch to dark mode",
     "switchToLight": "Switch to light mode"
   },
+  "landing": {
+    "navHow": "How it works",
+    "navFeatures": "Features",
+    "navSafety": "Safety",
+    "navDashboard": "Dashboard",
+    "badge": "Live right now",
+    "heroTitle": "Random video calls with people who",
+    "heroTitleAccent": "actually want to talk.",
+    "heroBody": "One tap drops you into a face-to-face call with a stranger somewhere in the world. Not interested? Skip, and you're in the next one before you finish the thought.",
+    "ctaPrimary": "Get started",
+    "ctaSecondary": "See how it works",
+    "heroTrust": "18+ only · Nothing recorded · Free to use",
+    "howEyebrow": "How it works",
+    "howTitle": "Three steps, about a minute",
+    "howBody": "No profile to fill in, no swiping, no waiting for someone to reply.",
+    "steps": {
+      "one": {
+        "title": "Create your account",
+        "body": "Email, Google, Discord, or a passkey. We ask your age because Cougny is adults-only — nothing else about you is shown to anyone."
+      },
+      "two": {
+        "title": "Press Start",
+        "body": "Allow your camera and microphone, and we put you in a queue. Matching usually takes a few seconds."
+      },
+      "three": {
+        "title": "Talk, or skip",
+        "body": "Say hello, play a game, or hit Skip and meet someone else. You're never stuck in a conversation."
+      }
+    },
+    "featuresEyebrow": "What you get",
+    "featuresTitle": "Built for real conversations",
+    "featuresBody": "Everything here exists to get two people talking and to keep the experience safe once they are.",
+    "features": {
+      "instant": {
+        "title": "Instant matching",
+        "body": "A peer-to-peer connection opens the moment you're paired, so calls start in seconds rather than ringing."
+      },
+      "private": {
+        "title": "Private by design",
+        "body": "Video, audio, and chat travel directly between the two of you over an encrypted connection. We don't record, store, or watch your calls."
+      },
+      "filters": {
+        "title": "Choose who you meet",
+        "body": "Filter by gender before you join the queue. Country filters are on the way."
+      },
+      "chat": {
+        "title": "Text alongside video",
+        "body": "A chat panel rides along with every call — for links, names, and the things easier typed than spoken."
+      },
+      "games": {
+        "title": "Games to break the ice",
+        "body": "Pick a game to play together when a conversation needs somewhere to start."
+      },
+      "leaderboard": {
+        "title": "A leaderboard",
+        "body": "See who's meeting the most people this week, and where you land against them."
+      }
+    },
+    "safetyTitle": "Adults only, and enforced",
+    "safetyLink": "Read the full terms",
+    "finalTitle": "Someone is waiting to talk.",
+    "finalBody": "Create an account and you're one tap from your first call.",
+    "footerNote": "Cougny is for adults 18 and over."
+  },
+  "dashboard": {
+    "greeting": "Hey, {name}",
+    "subtitle": "Start a call, play something, or see where you stand.",
+    "callEyebrow": "Random call",
+    "callTitle": "Meet someone new",
+    "callBody": "We'll pair you with someone at random. Skip any time — the next person is one tap away.",
+    "callAction": "Start a call",
+    "rulesTitle": "House rules",
+    "rulesBody": "Be decent. Nudity, harassment, hate speech, and anything illegal end an account permanently — report anyone who crosses that line and our team will review it."
+  },
+  "leaderboard": {
+    "title": "Leaderboard",
+    "period": {
+      "week": "This week",
+      "allTime": "All time"
+    },
+    "calls": "{count, number} calls",
+    "minutes": "{count, number} minutes on call",
+    "note": "Sample standings — live rankings are coming soon."
+  },
+  "games": {
+    "title": "Games",
+    "description": "Something to do together when the conversation needs a nudge.",
+    "play": "Play",
+    "comingSoon": "Coming soon",
+    "catalogue": {
+      "wouldYouRather": {
+        "title": "Would You Rather",
+        "body": "Two impossible options. Pick one, then argue about it."
+      },
+      "twoTruths": {
+        "title": "Two Truths & a Lie",
+        "body": "Three claims each. Guess which one doesn't hold up."
+      },
+      "trivia": {
+        "title": "Trivia Duel",
+        "body": "Fast questions, first correct answer takes the point."
+      },
+      "drawTogether": {
+        "title": "Draw Together",
+        "body": "A shared canvas. One of you draws, the other guesses."
+      }
+    }
+  },
   "terms": {
     "title": "Terms & Conditions",
     "updated": "Last updated: July 2026",
