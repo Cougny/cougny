@@ -12,6 +12,7 @@
     "build": "turbo run build",
     "dev": "turbo run dev --ui=stream",
     "dev:doppler": "doppler run -- turbo run dev --ui=stream",
+    "env:pull": "node scripts/env-pull.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
