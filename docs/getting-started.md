@@ -65,6 +65,36 @@ variables inline ([api](../apps/api/.env.example),
 | `NEXT_PUBLIC_API_URL`       | web            | Where the browser reaches the API.  |
 | `NEXT_PUBLIC_SIGNALING_URL` | web            | Where the browser opens the socket. |
 
+### Doppler instead of `.env` (optional)
+
+`.env` files are the default and need no account. If you have access to the
+Doppler workplace, the `cougny` project's `dev` config carries the same values
+and can inject them instead, so there is one place to change a local default
+rather than four files per machine.
+
+```bash
+doppler login
+doppler setup --project cougny --config dev   # scopes this directory
+pnpm dev:doppler
+```
+
+`dev:doppler` is `pnpm dev` with the secrets injected. Prefix any other command
+the same way when it needs them:
+
+```bash
+doppler run -- pnpm db:migrate
+```
+
+Injected variables win over `.env`: every app loads its file with `dotenv`,
+which does not overwrite variables already present in the environment. So the
+two can coexist — `.env` is the fallback for anyone without Doppler access, and
+nothing breaks if both are present.
+
+The `dev` config is deliberately **not** a copy of `prd`. Its signing secrets
+are generated separately, so a token minted locally is not valid against
+production, and it omits the keys that only mean something to the deployed
+stack (`ACME_EMAIL`, `*_DOMAIN`, `POSTGRES_PASSWORD`).
+
 ## Troubleshooting
 
 - **`Cannot find module '@cougny/protocol'`** — run `pnpm build` once so shared

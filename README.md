@@ -72,6 +72,10 @@ pnpm db:migrate
 pnpm dev
 ```
 
+With access to the Doppler workplace, `pnpm dev:doppler` injects the `cougny`
+project's `dev` config instead of reading `.env` — see
+[getting started](docs/getting-started.md#doppler-instead-of-env-optional).
+
 Open http://localhost:3000.
 
 ## Common tasks
