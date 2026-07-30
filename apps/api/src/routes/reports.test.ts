@@ -18,10 +18,6 @@ describe('POST /v1/reports', () => {
   let tokenA: string;
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
-    process.env.AUTH_JWT_SECRET = 'test-secret-at-least-16-chars';
-    process.env.TURN_STATIC_AUTH_SECRET = 'test-turn-secret';
-
     const { buildApp } = await import('../app.js');
     const { signSessionToken } = await import('../tokens.js');
     app = await buildApp();
