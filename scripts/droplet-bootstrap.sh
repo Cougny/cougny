@@ -77,7 +77,12 @@ if ! sshd -T | grep -x 'passwordauthentication no' >/dev/null; then
   exit 1
 fi
 
+echo "==> Backup directory"
+install -d -o deploy -g deploy /opt/cougny/backups
+
 echo
 echo "Bootstrap complete. Remaining manual steps:"
 echo "  1. sudo -u deploy doppler configure set token '<service-token>' --scope /opt/cougny"
 echo "  2. Point DNS at this host, set the GitHub secrets/vars, run the Deploy workflow."
+echo "  3. After that first deploy, install the nightly backup timer:"
+echo "       sudo bash /opt/cougny/scripts/install-backup-timer.sh"

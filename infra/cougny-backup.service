@@ -1,0 +1,23 @@
+[Unit]
+Description=Cougny database backup
+Documentation=https://github.com/Cougny/cougny/blob/main/docs/deployment.md
+# The dump goes through `docker compose run`, so there is nothing to do until
+# the daemon is up. Wants= rather than Requires=: a backup that is skipped
+# because Docker is down should not put the unit into a failed state forever.
+Wants=docker.service
+After=docker.service network-online.target
+
+[Service]
+Type=oneshot
+User=deploy
+Group=deploy
+WorkingDirectory=/opt/cougny
+ExecStart=/opt/cougny/scripts/db-backup.sh
+# Doppler holds the database password and the optional object-storage
+# credentials; the script shells out to `doppler run` itself, which needs the
+# service token configured for this user with --scope /opt/cougny.
+Environment=HOME=/home/deploy
+TimeoutStartSec=30min
+
+[Install]
+WantedBy=multi-user.target

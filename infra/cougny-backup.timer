@@ -1,0 +1,17 @@
+[Unit]
+Description=Take a Cougny database backup daily
+Documentation=https://github.com/Cougny/cougny/blob/main/docs/deployment.md
+
+[Timer]
+# 03:20 UTC rather than exactly 03:00: a fixed round hour is when every other
+# cron on every other host also fires, and the randomised delay below spreads
+# the load on shared object storage further.
+OnCalendar=*-*-* 03:20:00 UTC
+RandomizedDelaySec=20min
+# If the droplet was off or rebooting at 03:20, run as soon as it is back
+# rather than skipping a day silently.
+Persistent=true
+Unit=cougny-backup.service
+
+[Install]
+WantedBy=timers.target

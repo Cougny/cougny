@@ -85,11 +85,17 @@ jobs:
 
       - name: Sync server files
         run: |
-          ssh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} 'mkdir -p /opt/cougny/infra /opt/cougny/sql'
+          ssh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} 'mkdir -p /opt/cougny/infra /opt/cougny/sql /opt/cougny/scripts'
           scp docker-compose.prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/docker-compose.prod.yml
           scp infra/Caddyfile ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/infra/Caddyfile
           # Mounted by the db-provision service; the migrate image has no psql.
           scp packages/db/sql/provision-roles.sql ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/sql/provision-roles.sql
+          # Backup script runs from the host on a systemd timer, so it ships
+          # with every deploy. The units it is driven by change rarely and are
+          # installed by scripts/install-backup-timer.sh as root.
+          scp scripts/db-backup.sh scripts/install-backup-timer.sh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/scripts/
+          scp infra/cougny-backup.service infra/cougny-backup.timer ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/infra/
+          ssh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} 'chmod +x /opt/cougny/scripts/*.sh'
 
       - name: Pull images, migrate, restart
         run: |
