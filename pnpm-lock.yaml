@@ -10,7 +10,7 @@ overrides:
   postcss: ^8.5.18
   sharp: ^0.35.0
   valibot: ^1.4.2
-  '@hono/node-server': ^1.19.13
+  '@hono/node-server': ^2.0.5
 
 importers:
   .:
@@ -922,12 +922,12 @@ packages:
         integrity: sha512-lhqDEAvWixy3bZ+UOYbPwUbBkwBq5C1LAJ/xPC8Oi+lL54oyakv/npbA0aU2hgCsx/1NUd4IBvV03+aUBWxerw==,
       }
 
-  '@hono/node-server@1.19.17':
+  '@hono/node-server@2.0.12':
     resolution:
       {
-        integrity: sha512-dSneS5qhiauZWGDCeK4o695Xd9nUNjviSZCMQrj10eetr8Uln1ucn6bbphOM6UynAMMtNIzZNSpL9vnASJwrPQ==,
+        integrity: sha512-eWpQYr67tqJLeaSUl0Q+TquuYfUdTibpOJlUMV2FfUP7+KqCC5TufnwnlXL6mobZBJbGAYRd7ZvEBDCbLInjhg==,
       }
-    engines: { node: '>=18.14.1' }
+    engines: { node: '>=20' }
     peerDependencies:
       hono: ^4
 
@@ -6086,7 +6086,7 @@ snapshots:
 
   '@hexagon/base64@1.1.28': {}
 
-  '@hono/node-server@1.19.17(hono@4.12.27)':
+  '@hono/node-server@2.0.12(hono@4.12.27)':
     dependencies:
       hono: 4.12.27
 
@@ -6693,7 +6693,7 @@ snapshots:
       '@electric-sql/pglite': 0.4.1
       '@electric-sql/pglite-socket': 0.1.1(@electric-sql/pglite@0.4.1)
       '@electric-sql/pglite-tools': 0.3.1(@electric-sql/pglite@0.4.1)
-      '@hono/node-server': 1.19.17(hono@4.12.27)
+      '@hono/node-server': 2.0.12(hono@4.12.27)
       '@prisma/get-platform': 7.2.0
       '@prisma/query-plan-executor': 7.2.0
       '@prisma/streams-local': 0.1.2
