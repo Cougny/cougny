@@ -43,10 +43,16 @@ Guidance for GitHub Copilot and any AI assistant working in this repository.
    `prisma migrate deploy` only. Never mutate a database schema outside a
    committed migration in `packages/db/prisma/migrations/`.
 
-8. **Never create worktrees or branches without being asked.** Do not create
-   git worktrees, long-lived branches, or similar repository clutter unless
-   the user explicitly requests it. Remove any temporary artifacts you do
-   create before finishing the task.
+8. **Never create worktrees or branches without being asked, and clean up
+   stale ones.** Do not create git worktrees, long-lived branches, or similar
+   repository clutter unless the user explicitly requests it. Remove any
+   temporary artifacts you do create before finishing the task. Leftovers from
+   earlier sessions count too: check `git worktree list`, and remove any entry
+   whose tree is clean and whose commits are already contained in `main`
+   (`git worktree remove <path>`, then `git worktree prune`), deleting the
+   orphaned branch with it. Never delete a worktree, branch, or stash holding
+   uncommitted changes or unmerged commits — report it and let the user
+   decide.
 
 ## When in doubt
 
