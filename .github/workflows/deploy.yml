@@ -120,6 +120,13 @@ jobs:
           # database that already has a schema this pass is a no-op.
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm db-provision </dev/null
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
+          # Caddy's config is a bind mount, not part of its image, so `up -d`
+          # sees nothing changed and leaves the container Running with whatever
+          # Caddyfile it started with. Every edit to infra/Caddyfile was landing
+          # on disk and never taking effect. Reload explicitly: graceful, keeps
+          # connections, and does not re-issue certificates.
+          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml \
+            exec -T caddy caddy reload --config /etc/caddy/Caddyfile </dev/null
           # -a, not just dangling: every deploy pulls a fresh set of
           # commit-SHA-tagged images, and the old tags are not dangling, so a
           # plain prune leaves them to accumulate until the disk fills. After
