@@ -4,7 +4,6 @@
 #
 # Domains are injected as environment variables by the compose service (which
 # in turn gets them from Doppler) — nothing here is environment-specific.
-
 {
 	email {$ACME_EMAIL}
 }
