@@ -20,11 +20,21 @@
 {$API_DOMAIN} {
 	encode zstd gzip
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	# Prometheus metrics are operational data — request volumes, error rates,
+	# every route name — and both services serve them without authentication,
+	# the API's with rate limiting explicitly disabled. They are meant to be
+	# scraped from inside the Docker network, where a collector can still reach
+	# api:4000/metrics directly. Nothing reverse-proxied here should expose them
+	# to the internet. 404 rather than 403: no reason to confirm the path exists.
+	@metrics path /metrics /metrics/*
+	respond @metrics 404
 	reverse_proxy api:4000
 }
 
 # WebSocket signaling (Caddy proxies the Upgrade handshake transparently).
 {$SIGNALING_DOMAIN} {
 	header Strict-Transport-Security "max-age=31536000; includeSubDomains"
+	@metrics path /metrics /metrics/*
+	respond @metrics 404
 	reverse_proxy signaling:4001
 }

@@ -275,6 +275,44 @@ services:
         condition: service_healthy
     restart: 'no'
 
+  # ---- one-shot helper: dump the database -------------------------------------
+  # Writes one custom-format dump to the host's ./backups. Invoked by
+  # scripts/db-backup.sh on a systemd timer, which then handles retention and
+  # shipping the file off the host — see docs/deployment.md#backups.
+  #
+  # Runs as the superuser, not cougny_migrator: pg_dump has to read every object
+  # regardless of who owns it, and a backup that silently skips a table is worse
+  # than no backup at all.
+  #   doppler run -- docker compose -f docker-compose.prod.yml run --rm db-backup
+  db-backup:
+    image: postgres:18-alpine
+    profiles: ['tools']
+    logging: *default-logging
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-cougny}
+      PGUSER: ${POSTGRES_USER:-cougny}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}
+    volumes:
+      - ./backups:/backups
+    # -Fc is the custom format: compressed, and restorable table-at-a-time with
+    # pg_restore rather than all-or-nothing. Written to a temporary name first so
+    # a dump interrupted half-way is never mistaken for a complete one by the
+    # retention pass or an operator in a hurry.
+    entrypoint: ['sh', '-c']
+    command:
+      - |
+        set -eu
+        stamp="$$(date -u +%Y%m%dT%H%M%SZ)"
+        out="/backups/cougny-$$stamp.dump"
+        pg_dump --format=custom --compress=9 --file="$$out.partial"
+        mv "$$out.partial" "$$out"
+        echo "wrote $$out ($$(du -h "$$out" | cut -f1))"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
 volumes:
   pgdata:
   caddy_data:
