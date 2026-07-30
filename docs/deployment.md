@@ -369,14 +369,40 @@ droplet** — and the droplet holds the only copy of the database. Set these in
 Doppler to ship each dump to any S3-compatible store; the script warns on every
 run until you do.
 
-| Secret                        | Notes                                                               |
-| ----------------------------- | ------------------------------------------------------------------- |
-| `BACKUP_S3_BUCKET`            | Enables uploading. Unset = local dumps only, plus a warning         |
-| `BACKUP_S3_ACCESS_KEY_ID`     | Required once the bucket is set                                     |
-| `BACKUP_S3_SECRET_ACCESS_KEY` | Required once the bucket is set                                     |
-| `BACKUP_S3_ENDPOINT`          | For DigitalOcean Spaces, e.g. `https://fra1.digitaloceanspaces.com` |
-| `BACKUP_S3_REGION`            | Defaults to `us-east-1`; Spaces ignores it but the CLI wants one    |
-| `BACKUP_RETENTION_DAYS`       | Local retention, default `14`                                       |
+| Secret                        | Notes                                                       |
+| ----------------------------- | ----------------------------------------------------------- |
+| `BACKUP_S3_BUCKET`            | Enables uploading. Unset = local dumps only, plus a warning |
+| `BACKUP_S3_ACCESS_KEY_ID`     | Required once the bucket is set                             |
+| `BACKUP_S3_SECRET_ACCESS_KEY` | Required once the bucket is set                             |
+| `BACKUP_S3_ENDPOINT`          | Provider endpoint — see below                               |
+| `BACKUP_S3_REGION`            | Defaults to `auto`, which is what R2 wants                  |
+| `BACKUP_RETENTION_DAYS`       | Local retention, default `14`                               |
+
+**Cloudflare R2 is the default recommendation**, for a reason beyond its free
+tier being far larger than these dumps will ever need: it is not DigitalOcean.
+Backups stored on the same provider as the thing they protect share a failure
+domain — a suspended or compromised account takes out the database and every
+copy of it at once. Cougny's DNS already runs on Cloudflare, so this adds no new
+vendor.
+
+Create a bucket under **R2 → Create bucket**, then an API token under **Manage
+R2 API Tokens**, scoped to Object Read & Write on that bucket alone. The
+endpoint is `https://<account-id>.r2.cloudflarestorage.com`, the region `auto`.
+
+DigitalOcean Spaces works identically — endpoint
+`https://<region>.digitaloceanspaces.com` — if you would rather keep everything
+in one panel and accept the shared failure domain.
+
+> Uploads to anything that is not AWS need the CLI's default integrity checksum
+> turned off, which is why `db-backup.sh` sets
+> `AWS_REQUEST_CHECKSUM_CALCULATION` and `AWS_RESPONSE_CHECKSUM_VALIDATION` to
+> `when_required`. Since aws-cli v2.23 a CRC32 header is computed on every
+> upload, and providers that do not implement it reject the request outright.
+
+Set a lifecycle rule on the bucket to expire old objects — 90 days is
+reasonable. The script never deletes remote files, on the principle that a
+backup process holding delete rights over its own backups is one that can
+destroy them, so without a rule the bucket grows forever.
 
 Enable DigitalOcean's own droplet backups too. Logical dumps and whole-machine
 snapshots fail differently — a snapshot restores the box but is coarse, a dump

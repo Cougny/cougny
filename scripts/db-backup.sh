@@ -43,13 +43,22 @@ echo "    ok"
 if [ -n "${BACKUP_S3_BUCKET:-}" ]; then
   echo "==> Uploading to s3://$BACKUP_S3_BUCKET"
   # Run the CLI in a container so the host needs nothing installed. Works with
-  # any S3-compatible store; DigitalOcean Spaces wants BACKUP_S3_ENDPOINT set to
-  # e.g. https://fra1.digitaloceanspaces.com.
+  # any S3-compatible store — Cloudflare R2 (region `auto`, endpoint
+  # https://<account-id>.r2.cloudflarestorage.com) or DigitalOcean Spaces
+  # (e.g. https://fra1.digitaloceanspaces.com).
+  #
+  # The two checksum settings matter for anything that is not AWS. From v2.23
+  # the CLI computes a CRC32 integrity header on every upload by default, and
+  # S3-compatible providers that do not implement it reject the request. Asking
+  # for checksums only `when_required` restores the older behaviour. Harmless
+  # against real S3, so it is set unconditionally rather than per-provider.
   docker run --rm \
     -v "$(cd "$BACKUP_DIR" && pwd)":/backups:ro \
     -e AWS_ACCESS_KEY_ID="${BACKUP_S3_ACCESS_KEY_ID:?set it alongside BACKUP_S3_BUCKET}" \
     -e AWS_SECRET_ACCESS_KEY="${BACKUP_S3_SECRET_ACCESS_KEY:?set it alongside BACKUP_S3_BUCKET}" \
-    -e AWS_DEFAULT_REGION="${BACKUP_S3_REGION:-us-east-1}" \
+    -e AWS_DEFAULT_REGION="${BACKUP_S3_REGION:-auto}" \
+    -e AWS_REQUEST_CHECKSUM_CALCULATION=when_required \
+    -e AWS_RESPONSE_CHECKSUM_VALIDATION=when_required \
     amazon/aws-cli:latest \
     s3 cp "/backups/$(basename "$newest")" "s3://$BACKUP_S3_BUCKET/$(basename "$newest")" \
     ${BACKUP_S3_ENDPOINT:+--endpoint-url "$BACKUP_S3_ENDPOINT"}
