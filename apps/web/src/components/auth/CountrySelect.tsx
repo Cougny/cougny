@@ -1,8 +1,11 @@
 'use client';
 
-import { useMemo } from 'react';
+import { useMemo, useSyncExternalStore } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import { UN_COUNTRY_CODES, isCountryCode, type CountryCode } from '@cougny/protocol';
+
+/** No store to watch: the value only ever changes from server to client. */
+const subscribeToNothing = (): (() => void) => () => undefined;
 
 interface CountrySelectProps {
   id: string;
@@ -22,6 +25,14 @@ interface CountrySelectProps {
  * message file with 195 entries per language, and it stays current as the
  * browser's data updates. Sorting uses a locale-aware collator, because
  * alphabetical order is itself language-specific.
+ *
+ * The options are resolved after hydration rather than during it. Node and the
+ * browser carry independent copies of the Unicode locale data, and they do not
+ * agree: Node's CLDR 48 calls `PS` "Palestinian Territories" where Chrome says
+ * "Palestine". Rendering either name on the server makes the markup a claim the
+ * client cannot match, and React fails hydration over the difference. Deferring
+ * costs nothing real — the select needs its change handler to do anything, so
+ * it was never usable before hydration anyway.
  */
 export function CountrySelect({
   id,
@@ -33,7 +44,15 @@ export function CountrySelect({
   const locale = useLocale();
   const t = useTranslations('account');
 
+  const hydrated = useSyncExternalStore(
+    subscribeToNothing,
+    () => true,
+    () => false,
+  );
+
   const countries = useMemo(() => {
+    if (!hydrated) return [];
+
     const names = new Intl.DisplayNames([locale], { type: 'region' });
     const collator = new Intl.Collator(locale);
 
@@ -43,7 +62,7 @@ export function CountrySelect({
       // know, so an unfamiliar entry degrades to "PS" rather than disappearing.
       name: names.of(code) ?? code,
     })).sort((a, b) => collator.compare(a.name, b.name));
-  }, [locale]);
+  }, [locale, hydrated]);
 
   return (
     <select

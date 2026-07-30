@@ -72,6 +72,11 @@ pnpm db:migrate
 pnpm dev
 ```
 
+With access to the Doppler workplace, `pnpm env:pull` replaces step two: it
+fills every `.env` from the `cougny` project's `dev` config, so there is one
+place to change a local value rather than four files per machine. See
+[getting started](docs/getting-started.md#doppler-optional).
+
 Open http://localhost:3000.
 
 ## Common tasks

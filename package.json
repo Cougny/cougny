@@ -10,7 +10,9 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "dev": "turbo run dev",
+    "dev": "turbo run dev --ui=stream",
+    "dev:doppler": "doppler run -- turbo run dev --ui=stream",
+    "env:pull": "node scripts/env-pull.mjs",
     "lint": "turbo run lint",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
@@ -19,6 +21,7 @@
     "format:check": "prettier --check \"**/*.{ts,tsx,js,json,md}\"",
     "db:generate": "pnpm --filter @cougny/db generate",
     "db:migrate": "pnpm --filter @cougny/db migrate",
+    "db:provision": "bash scripts/db-provision-roles.sh",
     "db:studio": "pnpm --filter @cougny/db studio",
     "knip": "knip",
     "infra:up": "docker compose -f infra/docker-compose.yml up -d",

@@ -45,7 +45,7 @@ function LoginForm(): React.ReactElement {
 
   /** After signing in, a social sign-up may still owe us its profile details. */
   const onSignedIn = (profileComplete: boolean): void => {
-    router.push(profileComplete ? '/' : '/signup/complete');
+    router.push(profileComplete ? '/dashboard' : '/signup/complete');
   };
 
   const submit = (event: React.FormEvent): void => {

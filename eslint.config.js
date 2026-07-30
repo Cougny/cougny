@@ -13,6 +13,17 @@ import { base } from '@cougny/config-eslint/base';
 export default [
   ...base,
   {
+    /*
+     * Repo tooling: plain ESM run directly by node, so `no-undef` applies (it is
+     * off for TypeScript, where the compiler already checks this) and the Node
+     * globals have to be declared.
+     */
+    files: ['scripts/**/*.mjs'],
+    languageOptions: {
+      globals: { console: 'readonly', process: 'readonly' },
+    },
+  },
+  {
     ignores: ['apps/web/**', '**/dist/**', '**/.next/**', '**/node_modules/**'],
   },
 ];
