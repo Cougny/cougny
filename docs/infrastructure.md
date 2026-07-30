@@ -24,6 +24,11 @@ Configured via `POSTGRES_USER` / `POSTGRES_PASSWORD` / `POSTGRES_DB`. A
 healthcheck (`pg_isready`) gates readiness. Data persists in the `pgdata`
 volume; `docker compose down -v` wipes it.
 
+`POSTGRES_USER` is the cluster superuser and is used for one thing only:
+creating the two roles the stack actually runs on — `cougny_migrator` (owns the
+schema, runs migrations) and `cougny_app` (rows only, what the API and signaling
+services connect as). See [packages/db.md](./packages/db.md#roles).
+
 ### Redis
 
 Started with persistence disabled (`--save '' --appendonly no`) — it's a cache/

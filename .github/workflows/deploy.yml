@@ -85,9 +85,11 @@ jobs:
 
       - name: Sync server files
         run: |
-          ssh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} 'mkdir -p /opt/cougny/infra'
+          ssh ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }} 'mkdir -p /opt/cougny/infra /opt/cougny/sql'
           scp docker-compose.prod.yml ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/docker-compose.prod.yml
           scp infra/Caddyfile ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/infra/Caddyfile
+          # Mounted by the db-provision service; the migrate image has no psql.
+          scp packages/db/sql/provision-roles.sql ${{ vars.DEPLOY_USER }}@${{ vars.DEPLOY_HOST }}:/opt/cougny/sql/provision-roles.sql
 
       - name: Pull images, migrate, restart
         run: |
@@ -97,12 +99,20 @@ jobs:
           cd /opt/cougny
           echo "$REGISTRY_TOKEN" | docker login ghcr.io -u "$REGISTRY_USER" --password-stdin
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml --profile tools pull --quiet
-          # Migrations first, so new containers never meet an old schema.
-          # </dev/null is load-bearing: this script arrives via bash's stdin,
-          # and `compose run` attaches the container to that same stdin — the
-          # container would otherwise consume the rest of the script and the
-          # `up -d` below would silently never execute.
+          # Roles before migrations: `migrate deploy` connects as cougny_migrator,
+          # which only exists once provisioning has created it. Idempotent.
+          # </dev/null is load-bearing on every `compose run` below: this script
+          # arrives via bash's stdin, and `compose run` attaches the container to
+          # that same stdin — the container would otherwise consume the rest of
+          # the script and the `up -d` would silently never execute.
+          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm db-provision </dev/null
+          # Migrations next, so new containers never meet an old schema.
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm db-migrate </dev/null
+          # And once more afterwards. ALTER DEFAULT PRIVILEGES covers tables the
+          # migration just created, but `_prisma_migrations` is created the same
+          # way and must then have the app role's access revoked again. On a
+          # database that already has a schema this pass is a no-op.
+          doppler run --preserve-env -- docker compose -f docker-compose.prod.yml run --rm db-provision </dev/null
           doppler run --preserve-env -- docker compose -f docker-compose.prod.yml up -d --no-build --remove-orphans
           # -a, not just dangling: every deploy pulls a fresh set of
           # commit-SHA-tagged images, and the old tags are not dangling, so a

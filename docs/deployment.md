@@ -89,32 +89,62 @@ the secrets below — `doppler secrets set` or the dashboard, either works.
 
 ### Required secrets
 
-| Secret                      | Example / how to generate                |
-| --------------------------- | ---------------------------------------- |
-| `POSTGRES_PASSWORD`         | `openssl rand -hex 24`                   |
-| `AUTH_JWT_SECRET`           | `openssl rand -hex 32`                   |
-| `TURN_STATIC_AUTH_SECRET`   | `openssl rand -hex 32`                   |
-| `TURN_REALM`                | `cougny.com`                             |
-| `STUN_URL`                  | `stun:turn.cougny.com:3478`              |
-| `TURN_URL`                  | `turn:turn.cougny.com:3478`              |
-| `SIGNALING_ALLOWED_ORIGINS` | `https://cougny.com`                     |
-| `WEB_DOMAIN`                | `cougny.com`                             |
-| `API_DOMAIN`                | `api.cougny.com`                         |
-| `SIGNALING_DOMAIN`          | `signaling.cougny.com`                   |
-| `ACME_EMAIL`                | `ops@cougny.com` (Let's Encrypt contact) |
-| `WEB_APP_URL`               | `https://cougny.com`                     |
-| `API_PUBLIC_URL`            | `https://api.cougny.com`                 |
-| `SMTP_URL`                  | See [Transactional mail](#mail) below    |
+| Secret                       | Example / how to generate                |
+| ---------------------------- | ---------------------------------------- |
+| `POSTGRES_PASSWORD`          | `openssl rand -hex 24`                   |
+| `POSTGRES_MIGRATOR_PASSWORD` | `openssl rand -hex 24`                   |
+| `POSTGRES_APP_PASSWORD`      | `openssl rand -hex 24`                   |
+| `AUTH_JWT_SECRET`            | `openssl rand -hex 32`                   |
+| `TURN_STATIC_AUTH_SECRET`    | `openssl rand -hex 32`                   |
+| `TURN_REALM`                 | `cougny.com`                             |
+| `STUN_URL`                   | `stun:turn.cougny.com:3478`              |
+| `TURN_URL`                   | `turn:turn.cougny.com:3478`              |
+| `SIGNALING_ALLOWED_ORIGINS`  | `https://cougny.com`                     |
+| `WEB_DOMAIN`                 | `cougny.com`                             |
+| `API_DOMAIN`                 | `api.cougny.com`                         |
+| `SIGNALING_DOMAIN`           | `signaling.cougny.com`                   |
+| `ACME_EMAIL`                 | `ops@cougny.com` (Let's Encrypt contact) |
+| `WEB_APP_URL`                | `https://cougny.com`                     |
+| `API_PUBLIC_URL`             | `https://api.cougny.com`                 |
+| `SMTP_URL`                   | See [Transactional mail](#mail) below    |
 
 `WEB_APP_URL` and `API_PUBLIC_URL` are what emailed links and OAuth
 `redirect_uri` values are built from, so they must be the real public origins —
 not the internal service names.
 
+<a id="database-roles"></a>
+
+### Database roles
+
+Three identities, in descending privilege. The point of the split is that a
+compromised API or signaling process holds an identity that cannot change the
+schema or destroy data wholesale.
+
+| Role              | Password                     | Used by                           | May                                               |
+| ----------------- | ---------------------------- | --------------------------------- | ------------------------------------------------- |
+| `POSTGRES_USER`   | `POSTGRES_PASSWORD`          | the `db-provision` service, only  | everything — cluster superuser                    |
+| `cougny_migrator` | `POSTGRES_MIGRATOR_PASSWORD` | the `db-migrate` service, only    | own the schema; all DDL. Not a superuser          |
+| `cougny_app`      | `POSTGRES_APP_PASSWORD`      | `api`, `signaling`, Prisma Studio | `SELECT`/`INSERT`/`UPDATE`/`DELETE`, nothing else |
+
+The two application roles are created by
+[`packages/db/sql/provision-roles.sql`](../packages/db/sql/provision-roles.sql),
+which the `db-provision` service applies as the superuser. It is idempotent, the
+deploy workflow runs it on every deploy, and re-running it with changed values in
+Doppler is how the two passwords get rotated.
+
+It cannot be a Prisma migration: migrations run _as_ `cougny_migrator`, which has
+no `CREATE ROLE` privilege, so it cannot be the thing that creates itself.
+
+On an existing database the script also transfers ownership of every table,
+sequence and enum in `public` to `cougny_migrator` — without that, the next
+migration's `ALTER TABLE` would fail against objects still owned by the
+bootstrap role.
+
 ### Optional (defaults shown)
 
 | Secret                        | Default                        | Purpose                                                      |
 | ----------------------------- | ------------------------------ | ------------------------------------------------------------ |
-| `POSTGRES_USER`               | `cougny`                       | Database role                                                |
+| `POSTGRES_USER`               | `cougny`                       | Bootstrap superuser — provisioning only, never an app        |
 | `POSTGRES_DB`                 | `cougny`                       | Database name                                                |
 | `TURN_CREDENTIAL_TTL`         | `86400`                        | Minted TURN credential TTL (s)                               |
 | `TURN_MIN_PORT`               | `49160`                        | Relay range lower bound                                      |
@@ -207,10 +237,11 @@ Every push to `main` triggers the
 
 1. **build** — all four images (`web`, `api`, `signaling`, `migrate`) are
    built and pushed to GHCR, tagged `latest` and with the commit SHA.
-2. **deploy** — over SSH as `deploy`: sync `docker-compose.prod.yml` +
-   `Caddyfile` to `/opt/cougny`, pull the SHA-tagged images, run
-   `prisma migrate deploy` (migrations run **before** the new containers
-   start), then `docker compose up -d`.
+2. **deploy** — over SSH as `deploy`: sync `docker-compose.prod.yml`,
+   `Caddyfile` and `provision-roles.sql` to `/opt/cougny`, pull the SHA-tagged
+   images, provision the database roles, run `prisma migrate deploy`
+   (migrations run **before** the new containers start), reconcile the roles
+   once more, then `docker compose up -d`.
 
 Compose only recreates containers whose image or config changed, so a deploy
 that touches one service restarts one service. To roll back, re-run the
@@ -235,9 +266,18 @@ workflow run or if Actions is down. As `deploy` on the host:
 ```bash
 cd /opt/cougny
 doppler run -- docker compose -f docker-compose.prod.yml --profile tools pull
+doppler run -- docker compose -f docker-compose.prod.yml run --rm db-provision
 doppler run -- docker compose -f docker-compose.prod.yml run --rm --no-build db-migrate
+doppler run -- docker compose -f docker-compose.prod.yml run --rm db-provision
 doppler run -- docker compose -f docker-compose.prod.yml up -d --no-build
 ```
+
+`db-provision` runs twice on purpose. It has to precede `db-migrate`, because
+that connects as `cougny_migrator` and the role does not exist until
+provisioning creates it. The second pass matters only on a database that had no
+schema at all: `_prisma_migrations` is created during the migration, picks up the
+app role's grants from `ALTER DEFAULT PRIVILEGES` along with every real table,
+and needs them revoked again. On an established database it is a no-op.
 
 (Requires a `docker login ghcr.io` with a token that can read packages while
 the repository is private.) Building on the host instead of pulling also
@@ -280,13 +320,15 @@ Redis is ephemeral by design and needs no backup.
 
 ## Troubleshooting
 
-| Symptom                             | Check                                                                                                                        |
-| ----------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Deploy workflow fails at SSH        | `DEPLOY_SSH_KEY` secret matches the public key in `/home/deploy/.ssh/authorized_keys`; `infra/known_hosts` matches the host. |
-| Deploy fails at `doppler run`       | The Doppler service token isn't configured for the `deploy` user with `--scope /opt/cougny` (§4).                            |
-| Site unreachable / cert errors      | `docker compose logs caddy` — DNS must resolve to the host before ACME can issue.                                            |
-| `up` fails with "required variable" | The named secret is missing in the Doppler config.                                                                           |
-| Calls connect on wifi, fail on LTE  | TURN problem: relay range open in firewall? `TURN_URL` resolves to the host? `docker compose logs coturn`.                   |
-| Account emails never arrive         | `docker compose logs api` for `failed to send mail` — usually `MAIL_FROM` is on a domain the provider hasn't verified.       |
-| Camera prompt never appears         | Page not on HTTPS — check you're hitting Caddy, not a raw port.                                                              |
-| API/signaling unhealthy             | `docker compose logs api signaling` — usually a bad `DATABASE_URL` or unapplied migrations.                                  |
+| Symptom                                            | Check                                                                                                                        |
+| -------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| Deploy workflow fails at SSH                       | `DEPLOY_SSH_KEY` secret matches the public key in `/home/deploy/.ssh/authorized_keys`; `infra/known_hosts` matches the host. |
+| Deploy fails at `doppler run`                      | The Doppler service token isn't configured for the `deploy` user with `--scope /opt/cougny` (§4).                            |
+| Site unreachable / cert errors                     | `docker compose logs caddy` — DNS must resolve to the host before ACME can issue.                                            |
+| `up` fails with "required variable"                | The named secret is missing in the Doppler config.                                                                           |
+| Calls connect on wifi, fail on LTE                 | TURN problem: relay range open in firewall? `TURN_URL` resolves to the host? `docker compose logs coturn`.                   |
+| Account emails never arrive                        | `docker compose logs api` for `failed to send mail` — usually `MAIL_FROM` is on a domain the provider hasn't verified.       |
+| Camera prompt never appears                        | Page not on HTTPS — check you're hitting Caddy, not a raw port.                                                              |
+| API/signaling unhealthy                            | `docker compose logs api signaling` — usually a bad `DATABASE_URL` or unapplied migrations.                                  |
+| `permission denied for schema public` from the API | The apps are connecting as `cougny_app` but the schema predates it — run `db-provision`, then `db-migrate`.                  |
+| `migrate deploy` says permission denied            | `db-provision` has not run against this database, so `cougny_migrator` does not own the schema.                              |

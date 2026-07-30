@@ -5,7 +5,14 @@
 # `${VAR}` interpolations below resolve from the Doppler config:
 #
 #   doppler run -- docker compose -f docker-compose.prod.yml up -d --build
+#   doppler run -- docker compose -f docker-compose.prod.yml run --rm db-provision
 #   doppler run -- docker compose -f docker-compose.prod.yml run --rm db-migrate
+#
+# Three database identities, in descending privilege. POSTGRES_USER is the
+# cluster superuser and is used for nothing but provisioning; cougny_migrator
+# owns the schema and runs migrations; cougny_app can only read and write rows,
+# and is what the API and signaling services connect as. See
+# packages/db/sql/provision-roles.sql.
 #
 # Topology: Caddy terminates TLS (automatic Let's Encrypt) and reverse-proxies
 # the three apps; postgres and redis are reachable only on the internal
@@ -23,6 +30,9 @@ x-logging: &default-logging
   options:
     max-size: '10m'
     max-file: '3'
+
+# Row-level access only — the identity every long-running app process holds.
+x-app-database-url: &app-database-url postgresql://cougny_app:${POSTGRES_APP_PASSWORD:?run the db-provision service, then store the password in Doppler}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
 
 services:
   # ---- edge: TLS termination + reverse proxy ---------------------------------
@@ -79,7 +89,7 @@ services:
     logging: *default-logging
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+      DATABASE_URL: *app-database-url
       REDIS_URL: redis://redis:6379
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?generate with `openssl rand -hex 32`}
       SIGNALING_ALLOWED_ORIGINS: ${SIGNALING_ALLOWED_ORIGINS:?e.g. https://cougny.com}
@@ -131,7 +141,7 @@ services:
     logging: *default-logging
     environment:
       NODE_ENV: production
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+      DATABASE_URL: *app-database-url
       # Shared matchmaking pool + cross-instance signal relay.
       REDIS_URL: redis://redis:6379
       AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?generate with `openssl rand -hex 32`}
@@ -209,9 +219,46 @@ services:
       - --no-tls
       - --no-dtls
 
+  # ---- one-shot helper: provision the two application roles -------------------
+  # Runs as the cluster superuser — the only identity that may CREATE ROLE — and
+  # is the reason cougny_migrator can exist at all. Idempotent, so the deploy
+  # workflow runs it ahead of every migration; re-running it is also how the two
+  # passwords are rotated. Uses the stock postgres image purely for its psql.
+  #   doppler run -- docker compose -f docker-compose.prod.yml run --rm db-provision
+  db-provision:
+    image: postgres:18-alpine
+    profiles: ['tools']
+    logging: *default-logging
+    environment:
+      PGHOST: postgres
+      PGDATABASE: ${POSTGRES_DB:-cougny}
+      PGUSER: ${POSTGRES_USER:-cougny}
+      PGPASSWORD: ${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}
+      MIGRATOR_PASSWORD: ${POSTGRES_MIGRATOR_PASSWORD:?generate with `openssl rand -hex 24`}
+      APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?generate with `openssl rand -hex 24`}
+    volumes:
+      - ./sql/provision-roles.sql:/sql/provision-roles.sql:ro
+    # The passwords are piped in rather than passed as `--set` arguments, which
+    # would be readable in `ps` for the life of the container. `$$` is compose's
+    # escape for a literal `$`, so the shell — not compose — expands these.
+    entrypoint: ['sh', '-c']
+    command:
+      - |
+        set -eu
+        {
+          printf "\\\\set migrator_password '%s'\n" "$$MIGRATOR_PASSWORD"
+          printf "\\\\set app_password '%s'\n" "$$APP_PASSWORD"
+          cat /sql/provision-roles.sql
+        } | psql --quiet --no-psqlrc --set=ON_ERROR_STOP=1
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: 'no'
+
   # ---- one-shot helper: apply committed Prisma migrations ---------------------
   # Not started by `up`; run explicitly on first deploy and after schema changes:
   #   doppler run -- docker compose -f docker-compose.prod.yml run --rm db-migrate
+  # Connects as cougny_migrator: the schema owner, and not a superuser.
   db-migrate:
     image: ghcr.io/cougny/cougny-migrate:${IMAGE_TAG:-latest}
     build:
@@ -222,7 +269,7 @@ services:
     command: ['pnpm', 'prisma', 'migrate', 'deploy']
     logging: *default-logging
     environment:
-      DATABASE_URL: postgresql://${POSTGRES_USER:-cougny}:${POSTGRES_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
+      MIGRATE_DATABASE_URL: postgresql://cougny_migrator:${POSTGRES_MIGRATOR_PASSWORD:?generate with `openssl rand -hex 24`}@postgres:5432/${POSTGRES_DB:-cougny}?schema=public
     depends_on:
       postgres:
         condition: service_healthy
