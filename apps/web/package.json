@@ -16,17 +16,17 @@
     "@cougny/protocol": "workspace:*",
     "@simplewebauthn/browser": "^13.3.0",
     "next": "^16.2.12",
-    "next-intl": "^4.13.1",
-    "react": "^19.2.7",
-    "react-dom": "^19.2.7"
+    "next-intl": "^4.13.4",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8"
   },
   "devDependencies": {
     "@cougny/config-eslint": "workspace:*",
     "@cougny/config-typescript": "workspace:*",
     "@tailwindcss/postcss": "^4.3.2",
     "@types/node": "^26.1.0",
-    "@types/react": "^19.2.17",
-    "@types/react-dom": "^19.2.3",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "eslint": "^10.6.0",
     "postcss": "^8.5.25",
     "tailwindcss": "^4.3.2",
