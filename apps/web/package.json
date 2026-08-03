@@ -23,13 +23,13 @@
   "devDependencies": {
     "@cougny/config-eslint": "workspace:*",
     "@cougny/config-typescript": "workspace:*",
-    "@tailwindcss/postcss": "^4.3.2",
-    "@types/node": "^26.1.0",
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^26.1.2",
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
-    "eslint": "^10.6.0",
+    "eslint": "^10.8.0",
     "postcss": "^8.5.25",
-    "tailwindcss": "^4.3.2",
+    "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3"
   }
 }
