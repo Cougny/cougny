@@ -11,6 +11,13 @@ interface AuthShellProps {
   children: React.ReactNode;
   /** Cross-link strip pinned to the bottom of the card. */
   footer?: React.ReactNode;
+  /**
+   * Holds the card back this many milliseconds before its entrance plays,
+   * and switches the backdrop behind it to render instantly rather than
+   * fading in — for a caller arriving via a transition that already left
+   * this exact backdrop on screen a moment ago.
+   */
+  cardEntranceDelayMs?: number;
 }
 
 /**
@@ -33,15 +40,19 @@ export function AuthShell({
   subtitle,
   children,
   footer,
+  cardEntranceDelayMs,
 }: AuthShellProps): React.ReactElement {
   const t = useTranslations('app');
 
   return (
     <div className="relative min-h-dvh">
-      <AuthBackdrop />
+      <AuthBackdrop instant={cardEntranceDelayMs !== undefined} />
 
       <div className="relative flex min-h-dvh items-center justify-center px-4 py-10 sm:px-6 sm:py-14">
-        <section className="relative w-full max-w-md motion-safe:animate-auth-card">
+        <section
+          className="relative w-full max-w-md motion-safe:animate-auth-card"
+          style={cardEntranceDelayMs ? { animationDelay: `${cardEntranceDelayMs}ms` } : undefined}
+        >
           {/*
            * The shadow sits below the card and nowhere else. A negative spread
            * pulls it inside the card's own edges and the offset pushes it back

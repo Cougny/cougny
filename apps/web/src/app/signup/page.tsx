@@ -1,8 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
 import { isAtLeastMinimumAge, type CountryCode } from '@cougny/protocol';
 import { AuthDivider, AuthShell } from '@/components/auth/AuthShell';
@@ -21,10 +21,23 @@ const ERROR_KEYS: Record<string, string> = {
   age_requirement: 'ageRequirement',
 };
 
-export default function SignUpPage(): React.ReactElement {
+/**
+ * How long the card holds back when arriving via the landing page's zoom.
+ *
+ * Barely a beat — just enough that the card reads as arriving *onto* the
+ * settled call screen rather than being part of the same motion, which is
+ * what it looks like when the two overlap. It stays non-zero for a second
+ * reason: passing a value at all is what tells the shell this visitor
+ * already has the backdrop on screen, so it renders instantly instead of
+ * replaying its own fade.
+ */
+const HERO_CARD_DELAY_MS = 200;
+
+function SignUpForm(): React.ReactElement {
   const t = useTranslations('account');
   const router = useRouter();
   const { signUp } = useAuth();
+  const fromHero = useSearchParams().get('intro') === '1';
   // Nothing to separate when no provider is configured, so no rule either.
   const hasProviders = useOAuthProviders().length > 0;
 
@@ -81,6 +94,7 @@ export default function SignUpPage(): React.ReactElement {
     <AuthShell
       title={t('signUpTitle')}
       subtitle={t('signUpSubtitle')}
+      cardEntranceDelayMs={fromHero ? HERO_CARD_DELAY_MS : undefined}
       footer={
         <>
           {t('haveAccount')}{' '}
@@ -201,5 +215,15 @@ export default function SignUpPage(): React.ReactElement {
         </SubmitButton>
       </form>
     </AuthShell>
+  );
+}
+
+export default function SignUpPage(): React.ReactElement {
+  // `useSearchParams` needs a Suspense boundary to keep the rest of the route
+  // statically renderable.
+  return (
+    <Suspense>
+      <SignUpForm />
+    </Suspense>
   );
 }
