@@ -1,12 +1,7 @@
 import { createHmac } from 'node:crypto';
-import { describe, expect, it, beforeAll } from 'vitest';
+import { describe, expect, it } from 'vitest';
 
 describe('mintIceServers', () => {
-  beforeAll(() => {
-    process.env.AUTH_JWT_SECRET = 'test-secret-at-least-16-chars';
-    process.env.TURN_STATIC_AUTH_SECRET = 'test-turn-secret';
-  });
-
   it('produces a coturn-compatible HMAC credential that expires in the future', async () => {
     const { mintIceServers } = await import('./turn.js');
     const now = 1_700_000_000_000;

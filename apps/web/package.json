@@ -15,7 +15,7 @@
   "dependencies": {
     "@cougny/protocol": "workspace:*",
     "@simplewebauthn/browser": "^13.3.0",
-    "next": "^16.2.10",
+    "next": "^16.2.12",
     "next-intl": "^4.13.1",
     "react": "^19.2.7",
     "react-dom": "^19.2.7"
@@ -28,7 +28,7 @@
     "@types/react": "^19.2.17",
     "@types/react-dom": "^19.2.3",
     "eslint": "^10.6.0",
-    "postcss": "^8.5.16",
+    "postcss": "^8.5.25",
     "tailwindcss": "^4.3.2",
     "typescript": "^6.0.3"
   }

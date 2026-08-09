@@ -26,6 +26,10 @@ The stack is defined in
   reverse-proxies the three apps. HTTPS is not optional: browsers refuse
   camera/microphone access (`getUserMedia`) on insecure origins.
 - **postgres** and **redis** are only reachable on the internal Docker network.
+- **`/metrics` is blocked at the edge** on both the API and signaling domains.
+  Neither service authenticates it and the API disables rate limiting on it, so
+  it is internal-only: a collector scrapes `api:4000/metrics` on the Docker
+  network. See [Metrics](#metrics).
 - **coturn** uses host networking so ICE candidates carry real addresses.
 - **Doppler** injects every runtime secret on the host — no `.env` files exist
   in production.
@@ -303,20 +307,122 @@ corporate firewalls that only pass TLS. To enable it:
    to the API's ICE response.
 4. Restart coturn after each renewal (certs are read at startup).
 
-## Backups
+## <a id="metrics"></a>Metrics
 
-The only system of record is Postgres (`pgdata` volume). Two cheap options,
-use at least one:
+Both the API and the signaling service expose a Prometheus endpoint at
+`/metrics`. Neither authenticates it, and the API sets `rateLimit: false` on it.
+That is fine for something scraped over the Docker network and wrong for
+something on the public internet — the series names alone give away request
+volumes, error rates, every route, and the live matchmaking queue depth.
 
-- **Droplet snapshots** — whole-machine, point-in-time, via the DO panel.
-- **Logical dumps** — cron a `pg_dump` and ship it off-host:
+[`infra/Caddyfile`](../infra/Caddyfile) therefore answers `404` for `/metrics`
+and `/metrics/*` on both public domains, ahead of the `reverse_proxy`:
 
-  ```bash
-  docker compose -f docker-compose.prod.yml exec -T postgres \
-    pg_dump -U cougny -Fc cougny > "cougny-$(date +%F).dump"
-  ```
+```caddy
+@metrics path /metrics /metrics/*
+respond @metrics 404
+```
 
-Redis is ephemeral by design and needs no backup.
+It has to be a **named matcher**. The obvious-looking
+`respond /metrics /metrics/* 404` parses as a single matcher plus a response
+_body_ of `/metrics/*`, which silently leaves `/metrics/` reachable.
+
+To scrape, put the collector on the `cougny-prod` network and point it at
+`api:4000/metrics` and `signaling:4001/metrics`. Do not publish those ports —
+add the collector as a service in the compose file instead.
+
+## <a id="backups"></a>Backups
+
+The only system of record is Postgres (`pgdata` volume). Redis is ephemeral by
+design and needs none.
+
+A nightly dump runs automatically via a systemd timer. Install it once per host,
+after the first deploy has put the scripts on the box:
+
+```bash
+sudo bash /opt/cougny/scripts/install-backup-timer.sh
+```
+
+That enables `cougny-backup.timer` (03:20 UTC, with a randomised delay and
+`Persistent=true` so a reboot doesn't silently skip a day), which runs
+[`scripts/db-backup.sh`](../scripts/db-backup.sh). Each run:
+
+1. dumps the database through the `db-backup` compose service, custom-format and
+   compressed, writing to a `.partial` name first so an interrupted dump is
+   never mistaken for a complete one;
+2. verifies the archive with `pg_restore --list` — a dump that cannot be read
+   back is not a backup, and you want to learn that now rather than during an
+   incident;
+3. uploads it off-host when object storage is configured;
+4. prunes local dumps older than `BACKUP_RETENTION_DAYS` (default 14).
+
+Prove it works rather than assuming:
+
+```bash
+sudo -u deploy /opt/cougny/scripts/db-backup.sh
+```
+
+### Off-host storage
+
+**A dump that only exists on the droplet does not protect you from losing the
+droplet** — and the droplet holds the only copy of the database. Set these in
+Doppler to ship each dump to any S3-compatible store; the script warns on every
+run until you do.
+
+| Secret                        | Notes                                                               |
+| ----------------------------- | ------------------------------------------------------------------- |
+| `BACKUP_S3_BUCKET`            | Enables uploading. Unset = local dumps only, plus a warning         |
+| `BACKUP_S3_ACCESS_KEY_ID`     | Required once the bucket is set                                     |
+| `BACKUP_S3_SECRET_ACCESS_KEY` | Required once the bucket is set                                     |
+| `BACKUP_S3_ENDPOINT`          | For DigitalOcean Spaces, e.g. `https://fra1.digitaloceanspaces.com` |
+| `BACKUP_S3_REGION`            | Defaults to `us-east-1`; Spaces ignores it but the CLI wants one    |
+| `BACKUP_RETENTION_DAYS`       | Local retention, default `14`                                       |
+
+Enable DigitalOcean's own droplet backups too. Logical dumps and whole-machine
+snapshots fail differently — a snapshot restores the box but is coarse, a dump
+restores a single table but not the host — and the pair covers more than either.
+
+### Restoring
+
+Inspect an archive without touching any database:
+
+```bash
+docker compose -f docker-compose.prod.yml run --rm --entrypoint sh db-backup \
+  -c 'pg_restore --list /backups/cougny-<stamp>.dump'
+```
+
+Restore it. **This replaces objects — take a fresh dump first.**
+
+```bash
+doppler run -- docker compose -f docker-compose.prod.yml run --rm --entrypoint sh db-backup \
+  -c 'pg_restore --clean --if-exists --no-owner \
+      --dbname="postgresql://$PGUSER:$PGPASSWORD@postgres:5432/$PGDATABASE" \
+      /backups/cougny-<stamp>.dump'
+
+# then repair ownership and grants
+doppler run -- docker compose -f docker-compose.prod.yml run --rm db-provision
+```
+
+Two things about that pair, both learned by running it rather than reasoning
+about it:
+
+- **Restore as the superuser, and do not pass `--role=cougny_migrator`.** It
+  looks right — the dump records `cougny_migrator` as owner — but `pg_restore`
+  would then `SET ROLE` to an identity holding no privileges on a freshly
+  created database, since the grants in
+  [`provision-roles.sql`](../packages/db/sql/provision-roles.sql) are per
+  database. Every statement fails with `permission denied for schema public`,
+  and `pg_restore` reports it only as an ignored-error count at the end while
+  exiting 0. A restore that silently restores nothing is the worst possible
+  failure mode here.
+- **`--no-owner` leaves everything owned by the superuser,** which is the state
+  the role split exists to avoid. The `db-provision` run afterwards is what
+  transfers ownership to `cougny_migrator` and reapplies the app role's grants.
+  It is not optional.
+
+Verified end to end against a populated database: dump, `pg_restore --list`,
+restore into a fresh database, provision, confirm row counts match the original
+and that `cougny_app` can read but not `DROP`.
 
 ## Troubleshooting
 

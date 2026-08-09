@@ -77,10 +77,6 @@ describe('account routes', () => {
   let app: FastifyInstance;
 
   beforeAll(async () => {
-    process.env.NODE_ENV = 'test';
-    process.env.AUTH_JWT_SECRET = 'test-secret-at-least-16-chars';
-    process.env.TURN_STATIC_AUTH_SECRET = 'test-turn-secret';
-
     const { buildApp } = await import('../app.js');
     app = await buildApp();
   });

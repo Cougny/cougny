@@ -30,6 +30,9 @@ coverage/
 npm-debug.log*
 pnpm-debug.log*
 
+# Database dumps written by scripts/db-backup.sh — never in the repository.
+backups/
+
 # Editor
 .vscode/*
 !.vscode/extensions.json
