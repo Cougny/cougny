@@ -102,11 +102,7 @@ export function LiveStage({ href }: LiveStageProps): React.ReactElement {
    * screen-reader visitor lands on that one button too, instead of reaching
    * individual controls the mouse can no longer trigger.
    */
-  const renderStage = (
-    onStart: () => void,
-    fill: boolean,
-    interactive: boolean,
-  ): React.ReactElement => (
+  const renderStage = (fill: boolean, interactive: boolean): React.ReactElement => (
     <div
       className={`grid grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr] ${
         fill ? 'h-full' : 'aspect-[9/16] sm:aspect-[16/10]'
@@ -153,7 +149,7 @@ export function LiveStage({ href }: LiveStageProps): React.ReactElement {
           <button
             type="button"
             aria-label={t('start')}
-            onClick={onStart}
+            onClick={handleStart}
             className="absolute inset-0 h-full w-full cursor-pointer"
           />
         )}
@@ -175,7 +171,7 @@ export function LiveStage({ href }: LiveStageProps): React.ReactElement {
           zooming ? 'invisible' : ''
         }`}
       >
-        {renderStage(handleStart, false, true)}
+        {renderStage(false, true)}
       </div>
 
       {/*
@@ -203,7 +199,7 @@ export function LiveStage({ href }: LiveStageProps): React.ReactElement {
               expanded ? 'rounded-none' : 'rounded-2xl'
             }`}
           >
-            {renderStage(noop, expanded, false)}
+            {renderStage(expanded, false)}
             {/* Scrim, matching the one behind the sign-up card this hands off to. */}
             <div
               className={`absolute inset-0 bg-neutral-900/20 transition-opacity duration-700 ease-out dark:bg-neutral-950/50 ${

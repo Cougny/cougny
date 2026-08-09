@@ -30,7 +30,6 @@ const STEPS = ['one', 'two', 'three'] as const;
 export default function LandingPage(): React.ReactElement {
   const t = useTranslations('landing');
   const tApp = useTranslations('app');
-  const tCall = useTranslations('call');
   const tTerms = useTranslations('terms');
   const tAccount = useTranslations('account');
   const { status } = useAuth();
