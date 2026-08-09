@@ -154,22 +154,6 @@ export function ShieldIcon({ className }: IconProps): React.ReactElement {
   );
 }
 
-export function ChatIcon({ className }: IconProps): React.ReactElement {
-  return (
-    <svg {...iconAttrs(className)}>
-      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-    </svg>
-  );
-}
-
-export function BoltIcon({ className }: IconProps): React.ReactElement {
-  return (
-    <svg {...iconAttrs(className)}>
-      <path d="M13 2 4 14h7l-1 8 9-12h-7z" />
-    </svg>
-  );
-}
-
 export function ArrowRightIcon({ className }: IconProps): React.ReactElement {
   return (
     <svg {...iconAttrs(className)}>
