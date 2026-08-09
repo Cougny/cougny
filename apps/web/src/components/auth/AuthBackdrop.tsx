@@ -21,7 +21,14 @@ const noop = (): void => undefined;
  * accessibility tree and the tab order entirely, so the card floating above is
  * the only thing anyone can read or reach.
  */
-export function AuthBackdrop(): React.ReactElement {
+interface AuthBackdropProps {
+  /** Skips the fade-in and the blur — for a caller whose previous frame
+   *  already showed this exact backdrop sharp and unanimated, where fading
+   *  or blurring it now would read as a change rather than a continuation. */
+  instant?: boolean;
+}
+
+export function AuthBackdrop({ instant = false }: AuthBackdropProps): React.ReactElement {
   const t = useTranslations('call');
   const tApp = useTranslations('app');
 
@@ -29,7 +36,9 @@ export function AuthBackdrop(): React.ReactElement {
     <div
       inert
       aria-hidden
-      className="pointer-events-none fixed inset-0 select-none overflow-hidden bg-neutral-100 motion-safe:animate-auth-backdrop dark:bg-neutral-950"
+      className={`pointer-events-none fixed inset-0 select-none overflow-hidden bg-neutral-100 dark:bg-neutral-950 ${
+        instant ? '' : 'motion-safe:animate-auth-backdrop'
+      }`}
     >
       {/*
        * Bled past the viewport rather than scaled up. The blur needs material
@@ -39,7 +48,7 @@ export function AuthBackdrop(): React.ReactElement {
        * the room next door. Growing the box keeps everything at its true size
        * and pushes the soft edges off-screen instead.
        */}
-      <div className="absolute inset-0 blur-[5px]">
+      <div className={`absolute inset-0 ${instant ? '' : 'blur-[5px]'}`}>
         <div className="grid h-full w-full grid-rows-[1fr_auto] sm:grid-rows-[70fr_30fr]">
           <div className="flex min-h-0 flex-col gap-3 overflow-hidden p-3 sm:flex-row">
             <VideoPanel label={t('you')}>
