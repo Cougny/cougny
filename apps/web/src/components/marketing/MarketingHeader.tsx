@@ -12,7 +12,7 @@ import { MoonIcon, SunIcon } from '@/components/icons';
  * Distinct from `SiteHeader`, which serves signed-in screens: this one carries
  * the section anchors and the two sign-up doors, and it renders for visitors
  * who have no account to put a menu behind. Once someone is signed in, the two
- * buttons collapse into a single way through to the dashboard.
+ * buttons collapse into a single way through to the call screen.
  */
 export function MarketingHeader(): React.ReactElement {
   const t = useTranslations('landing');
@@ -70,7 +70,7 @@ export function MarketingHeader(): React.ReactElement {
            */}
           {status === 'loading' ? null : signedIn ? (
             <Link
-              href="/dashboard"
+              href="/call"
               className="whitespace-nowrap rounded-full bg-neutral-900 px-2.5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 active:scale-[0.98] sm:px-5 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
             >
               {t('navDashboard')}

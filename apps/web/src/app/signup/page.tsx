@@ -80,7 +80,7 @@ function SignUpForm(): React.ReactElement {
     void (async () => {
       try {
         await signUp({ email, username, password, dateOfBirth, country });
-        router.push('/dashboard');
+        router.push('/call');
       } catch (err) {
         setError(
           err instanceof AuthError ? t(ERROR_KEYS[err.code] ?? 'signUpFailed') : t('signUpFailed'),

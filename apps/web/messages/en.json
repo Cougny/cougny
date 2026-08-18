@@ -71,50 +71,6 @@
     "finalBody": "Create an account and you're one tap from your first call.",
     "footerNote": "Cougny is for adults 18 and over."
   },
-  "dashboard": {
-    "greeting": "Hey, {name}",
-    "subtitle": "Start a call, play something, or see where you stand.",
-    "callEyebrow": "Random call",
-    "callTitle": "Meet someone new",
-    "callBody": "We'll pair you with someone at random. Skip any time — the next person is one tap away.",
-    "callAction": "Start a call",
-    "rulesTitle": "House rules",
-    "rulesBody": "Be decent. Nudity, harassment, hate speech, and anything illegal end an account permanently — report anyone who crosses that line and our team will review it."
-  },
-  "leaderboard": {
-    "title": "Leaderboard",
-    "period": {
-      "week": "This week",
-      "allTime": "All time"
-    },
-    "calls": "{count, number} calls",
-    "minutes": "{count, number} minutes on call",
-    "note": "Sample standings — live rankings are coming soon."
-  },
-  "games": {
-    "title": "Games",
-    "description": "Something to do together when the conversation needs a nudge.",
-    "play": "Play",
-    "comingSoon": "Coming soon",
-    "catalogue": {
-      "wouldYouRather": {
-        "title": "Would You Rather",
-        "body": "Two impossible options. Pick one, then argue about it."
-      },
-      "twoTruths": {
-        "title": "Two Truths & a Lie",
-        "body": "Three claims each. Guess which one doesn't hold up."
-      },
-      "trivia": {
-        "title": "Trivia Duel",
-        "body": "Fast questions, first correct answer takes the point."
-      },
-      "drawTogether": {
-        "title": "Draw Together",
-        "body": "A shared canvas. One of you draws, the other guesses."
-      }
-    }
-  },
   "terms": {
     "title": "Terms & Conditions",
     "updated": "Last updated: July 2026",
