@@ -125,7 +125,7 @@ export function AccountMenu({ floating = false }: AccountMenuProps): React.React
           )}
           {/* The call screen has no header, so this is the only way back out of it. */}
           <Link
-            href="/dashboard"
+            href="/call"
             role="menuitem"
             onClick={() => setOpen(false)}
             className="block px-4 py-2 text-sm text-neutral-700 transition hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-800"

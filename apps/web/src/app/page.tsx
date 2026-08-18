@@ -16,10 +16,10 @@ const STEPS = ['one', 'two', 'three'] as const;
 /**
  * cougny.com — what the product is, for people who do not have it yet.
  *
- * The app proper lives behind `/dashboard`; this page's whole job is to explain
+ * The app proper lives behind `/call`; this page's whole job is to explain
  * the thing and hand visitors to sign-up. Signed-in visitors get the same page
- * with every call-to-action pointed at the dashboard instead, so the front door
- * never asks someone to sign up twice.
+ * with every call-to-action pointed at the call screen instead, so the front
+ * door never asks someone to sign up twice.
  *
  * Structurally it is deliberately un-boxed. Panels of copy in rounded cards are
  * the house style of every generated marketing page, and stacking six of them
@@ -35,7 +35,7 @@ export default function LandingPage(): React.ReactElement {
   const { status } = useAuth();
 
   const signedIn = status === 'authenticated';
-  const primaryHref = signedIn ? '/dashboard' : '/signup';
+  const primaryHref = signedIn ? '/call' : '/signup';
   const primaryLabel = signedIn ? t('navDashboard') : t('ctaPrimary');
 
   return (
@@ -197,7 +197,7 @@ export default function LandingPage(): React.ReactElement {
                 while pointing at the login form regardless of sign-in state —
                 a bait-and-switch for every signed-out visitor who clicked it. */}
             <Link
-              href={signedIn ? '/dashboard' : '/login'}
+              href={signedIn ? '/call' : '/login'}
               className="transition hover:text-neutral-900 dark:hover:text-white"
             >
               {signedIn ? t('navDashboard') : tAccount('signIn')}
