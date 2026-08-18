@@ -95,7 +95,7 @@ export function SecuritySection({ user, token }: Props): React.ReactElement {
             type="password"
             autoComplete="new-password"
             required
-            minLength={12}
+            minLength={8}
             value={newPassword}
             disabled={pending}
             onChange={(event) => setNewPassword(event.target.value)}

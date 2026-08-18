@@ -146,7 +146,7 @@ function SignUpForm(): React.ReactElement {
             type="password"
             autoComplete="new-password"
             required
-            minLength={12}
+            minLength={8}
             value={password}
             disabled={pending}
             onChange={(event) => setPassword(event.target.value)}
