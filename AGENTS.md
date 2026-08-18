@@ -54,7 +54,9 @@ Guidance for any AI agent or assistant working in this repository.
    (`git worktree remove <path>`, then `git worktree prune`), deleting the
    orphaned branch with it. Never delete a worktree, branch, or stash holding
    uncommitted changes or unmerged commits — report it and let the user
-   decide.
+   decide. The `cla-signatures` branch is permanent infrastructure — it
+   stores the project's CLA signatures — so never delete it, locally or on
+   the remote, even though it is fully merged into `main`.
 
 ## When in doubt
 
