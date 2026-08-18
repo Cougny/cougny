@@ -9,6 +9,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { AuthError, changePassword } from '@/lib/auth';
 
 interface Props {
+  index: number;
   user: UserProfile;
   token: string;
 }
@@ -17,7 +18,7 @@ interface Props {
  * Password management. An account created socially has none yet, so the same
  * form doubles as "set a password" — with no current password to ask for.
  */
-export function SecuritySection({ user, token }: Props): React.ReactElement {
+export function SecuritySection({ index, user, token }: Props): React.ReactElement {
   const t = useTranslations('account');
   const { reload } = useAuth();
 
@@ -65,6 +66,7 @@ export function SecuritySection({ user, token }: Props): React.ReactElement {
 
   return (
     <Section
+      index={index}
       title={t('passwordTitle')}
       description={user.hasPassword ? t('passwordDescription') : t('setPasswordDescription')}
     >
@@ -117,7 +119,7 @@ export function SecuritySection({ user, token }: Props): React.ReactElement {
 
         {mismatched && <FormError message={t('passwordsDoNotMatch')} />}
 
-        <SecondaryButton type="submit" disabled={!ready || pending}>
+        <SecondaryButton tone="primary" type="submit" disabled={!ready || pending}>
           {user.hasPassword ? t('changePassword') : t('setPassword')}
         </SecondaryButton>
       </form>

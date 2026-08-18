@@ -10,6 +10,7 @@ import { useAuth } from '@/components/auth/AuthProvider';
 import { AuthError, deleteAccount } from '@/lib/auth';
 
 interface Props {
+  index: number;
   user: UserProfile;
   token: string;
 }
@@ -22,7 +23,7 @@ interface Props {
  * removing them would erase moderation evidence about other people, not just
  * about the person leaving.
  */
-export function DangerSection({ user, token }: Props): React.ReactElement {
+export function DangerSection({ index, user, token }: Props): React.ReactElement {
   const t = useTranslations('account');
   const router = useRouter();
   const { signOut } = useAuth();
@@ -54,7 +55,7 @@ export function DangerSection({ user, token }: Props): React.ReactElement {
   };
 
   return (
-    <Section title={t('deleteTitle')} description={t('deleteDescription')}>
+    <Section index={index} title={t('deleteTitle')} description={t('deleteDescription')}>
       {confirming ? (
         <div className="space-y-4">
           <FormError message={error} />
@@ -76,7 +77,7 @@ export function DangerSection({ user, token }: Props): React.ReactElement {
 
           <div className="flex gap-2">
             <SecondaryButton
-              tone="danger"
+              tone="destructive"
               onClick={remove}
               disabled={pending || (user.hasPassword && password === '')}
             >

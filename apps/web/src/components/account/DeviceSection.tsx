@@ -4,7 +4,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useLocale, useTranslations } from 'next-intl';
 import type { AuthSessionSummary } from '@cougny/protocol';
 import { FormError } from '@/components/auth/fields';
-import { Section, SecondaryButton } from '@/components/account/Section';
+import { Section, SecondaryButton, List, ListRow, Pill } from '@/components/account/Section';
 import { fetchSessions, revokeOtherSessions, revokeSession } from '@/lib/auth';
 
 /**
@@ -14,7 +14,13 @@ import { fetchSessions, revokeOtherSessions, revokeSession } from '@/lib/auth';
  * sessions takes effect immediately, because every request re-checks its
  * session rather than trusting the access token alone.
  */
-export function DeviceSection({ token }: { token: string }): React.ReactElement {
+export function DeviceSection({
+  index,
+  token,
+}: {
+  index: number;
+  token: string;
+}): React.ReactElement {
   const t = useTranslations('account');
   const locale = useLocale();
 
@@ -49,36 +55,44 @@ export function DeviceSection({ token }: { token: string }): React.ReactElement 
     );
 
   return (
-    <Section title={t('devicesTitle')} description={t('devicesDescription')}>
+    <Section index={index} title={t('devicesTitle')} description={t('devicesDescription')}>
       <div className="space-y-4">
         <FormError message={error} />
 
-        <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+        <List>
           {sessions.map((session) => (
-            <li key={session.id} className="flex items-center justify-between gap-4 py-3">
-              <div className="min-w-0">
-                <p className="truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
+            <ListRow
+              key={session.id}
+              action={
+                !session.current && (
+                  <SecondaryButton tone="danger" onClick={() => end(session.id)}>
+                    {t('signOutDevice')}
+                  </SecondaryButton>
+                )
+              }
+            >
+              {/* The pill is a sibling of the truncating span rather than
+                  inside it: a long user agent is the normal case, and nested
+                  in the same box the "this device" marker is the first thing
+                  the ellipsis eats. */}
+              <div className="flex items-center gap-2">
+                <span className="truncate text-sm font-medium text-neutral-900 dark:text-neutral-100">
                   {/* The user agent is the only handle we have on a device; it
                       is displayed as text and never interpreted. */}
                   {session.userAgent ?? t('unknownDevice')}
-                  {session.current && (
-                    <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300">
-                      {t('thisDevice')}
-                    </span>
-                  )}
-                </p>
-                <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                  {t('lastActive', { date: formatDateTime(session.lastUsedAt) })}
-                </p>
+                </span>
+                {session.current && (
+                  <span className="shrink-0">
+                    <Pill tone="positive">{t('thisDevice')}</Pill>
+                  </span>
+                )}
               </div>
-              {!session.current && (
-                <SecondaryButton tone="danger" onClick={() => end(session.id)}>
-                  {t('signOutDevice')}
-                </SecondaryButton>
-              )}
-            </li>
+              <p className="pt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                {t('lastActive', { date: formatDateTime(session.lastUsedAt) })}
+              </p>
+            </ListRow>
           ))}
-        </ul>
+        </List>
 
         {sessions.length > 1 && (
           <SecondaryButton tone="danger" onClick={endOthers}>
