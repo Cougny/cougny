@@ -130,7 +130,7 @@ export function AccountMenu({ floating = false }: AccountMenuProps): React.React
             onClick={() => setOpen(false)}
             className="block px-4 py-2 text-sm text-neutral-700 transition hover:bg-neutral-50 dark:text-neutral-200 dark:hover:bg-neutral-800"
           >
-            {tLanding('navDashboard')}
+            {tLanding('navCall')}
           </Link>
           <Link
             href="/account"

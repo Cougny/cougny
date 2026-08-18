@@ -65,7 +65,7 @@ export function MarketingHeader(): React.ReactElement {
 
           {/*
            * Nothing is rendered while the initial refresh is in flight: a
-           * "Sign in" that turns into "Dashboard" a beat later reads as a bug
+           * "Sign in" that turns into "Start a call" a beat later reads as a bug
            * to someone who never signed out.
            */}
           {status === 'loading' ? null : signedIn ? (
@@ -73,7 +73,7 @@ export function MarketingHeader(): React.ReactElement {
               href="/call"
               className="whitespace-nowrap rounded-full bg-neutral-900 px-2.5 py-2 text-sm font-semibold text-white transition hover:bg-neutral-800 active:scale-[0.98] sm:px-5 dark:bg-white dark:text-neutral-900 dark:hover:bg-neutral-200"
             >
-              {t('navDashboard')}
+              {t('navCall')}
             </Link>
           ) : (
             <>
