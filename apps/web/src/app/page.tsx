@@ -36,7 +36,7 @@ export default function LandingPage(): React.ReactElement {
 
   const signedIn = status === 'authenticated';
   const primaryHref = signedIn ? '/call' : '/signup';
-  const primaryLabel = signedIn ? t('navDashboard') : t('ctaPrimary');
+  const primaryLabel = signedIn ? t('navCall') : t('ctaPrimary');
 
   return (
     <div className="relative min-h-dvh overflow-x-hidden">
@@ -193,14 +193,14 @@ export default function LandingPage(): React.ReactElement {
             <Link href="/terms" className="transition hover:text-neutral-900 dark:hover:text-white">
               {tTerms('title')}
             </Link>
-            {/* Label follows the destination: this used to read "Dashboard"
-                while pointing at the login form regardless of sign-in state —
-                a bait-and-switch for every signed-out visitor who clicked it. */}
+            {/* Label follows the destination: this once pointed at the login
+                form regardless of sign-in state — a bait-and-switch for every
+                signed-out visitor who clicked it. */}
             <Link
               href={signedIn ? '/call' : '/login'}
               className="transition hover:text-neutral-900 dark:hover:text-white"
             >
-              {signedIn ? t('navDashboard') : tAccount('signIn')}
+              {signedIn ? t('navCall') : tAccount('signIn')}
             </Link>
           </div>
           <p className="text-xs text-neutral-400 dark:text-neutral-500">{t('footerNote')}</p>

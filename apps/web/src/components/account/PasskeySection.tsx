@@ -6,7 +6,7 @@ import { startRegistration } from '@simplewebauthn/browser';
 import type { PublicKeyCredentialCreationOptionsJSON } from '@simplewebauthn/browser';
 import type { PasskeySummary } from '@cougny/protocol';
 import { FormError, FormSuccess } from '@/components/auth/fields';
-import { Section, SecondaryButton } from '@/components/account/Section';
+import { Section, SecondaryButton, List, ListRow } from '@/components/account/Section';
 import { useWebAuthnSupport } from '@/hooks/useWebAuthnSupport';
 import { PasskeyIcon } from '@/components/icons';
 import {
@@ -25,7 +25,13 @@ import {
  * loses the credential, and a user should know which kind they have before it
  * becomes their only way in.
  */
-export function PasskeySection({ token }: { token: string }): React.ReactElement | null {
+export function PasskeySection({
+  index,
+  token,
+}: {
+  index: number;
+  token: string;
+}): React.ReactElement | null {
   const t = useTranslations('account');
   const locale = useLocale();
 
@@ -112,7 +118,7 @@ export function PasskeySection({ token }: { token: string }): React.ReactElement
     new Intl.DateTimeFormat(locale, { dateStyle: 'medium' }).format(new Date(iso));
 
   return (
-    <Section title={t('passkeysTitle')} description={t('passkeysDescription')}>
+    <Section index={index} title={t('passkeysTitle')} description={t('passkeysDescription')}>
       <div className="space-y-4">
         <FormError message={error} />
         {added && <FormSuccess message={t('passkeyAdded')} />}
@@ -120,60 +126,60 @@ export function PasskeySection({ token }: { token: string }): React.ReactElement
         {passkeys.length === 0 ? (
           <p className="text-sm text-neutral-500 dark:text-neutral-400">{t('noPasskeys')}</p>
         ) : (
-          <ul className="divide-y divide-neutral-200 dark:divide-neutral-800">
+          <List>
             {passkeys.map((passkey) => (
-              <li key={passkey.id} className="flex items-center justify-between gap-4 py-3">
-                <div className="flex min-w-0 items-center gap-3">
-                  <PasskeyIcon className="h-5 w-5 shrink-0 text-neutral-400" />
-                  <div className="min-w-0">
-                    {renaming === passkey.id ? (
-                      <form
-                        onSubmit={(event) => {
-                          event.preventDefault();
-                          rename(passkey.id);
-                        }}
-                      >
-                        <input
-                          autoFocus
-                          maxLength={60}
-                          value={draftName}
-                          onChange={(event) => setDraftName(event.target.value)}
-                          onBlur={() => rename(passkey.id)}
-                          aria-label={t('passkeyName')}
-                          className="w-full rounded-lg border border-neutral-200 bg-neutral-50 px-2 py-1 text-sm text-neutral-900 focus:border-brand focus:outline-none dark:border-neutral-700 dark:bg-neutral-950 dark:text-neutral-100"
-                        />
-                      </form>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRenaming(passkey.id);
-                          setDraftName(passkey.name ?? '');
-                        }}
-                        title={t('renamePasskey')}
-                        className="block max-w-full truncate text-left text-sm font-medium text-neutral-900 hover:underline dark:text-neutral-100"
-                      >
-                        {passkey.name ?? t('unnamedPasskey')}
-                      </button>
-                    )}
-                    <p className="text-xs text-neutral-500 dark:text-neutral-400">
-                      {passkey.lastUsedAt
-                        ? t('lastUsed', { date: formatDate(passkey.lastUsedAt) })
-                        : t('addedOn', { date: formatDate(passkey.createdAt) })}
-                      {!passkey.backedUp && ` · ${t('singleDevicePasskey')}`}
-                    </p>
-                  </div>
-                </div>
-                <SecondaryButton tone="danger" onClick={() => remove(passkey.id)}>
-                  {t('remove')}
-                </SecondaryButton>
-              </li>
+              <ListRow
+                key={passkey.id}
+                icon={<PasskeyIcon className="h-5 w-5 shrink-0 text-neutral-400" />}
+                action={
+                  <SecondaryButton tone="danger" onClick={() => remove(passkey.id)}>
+                    {t('remove')}
+                  </SecondaryButton>
+                }
+              >
+                {renaming === passkey.id ? (
+                  <form
+                    onSubmit={(event) => {
+                      event.preventDefault();
+                      rename(passkey.id);
+                    }}
+                  >
+                    <input
+                      autoFocus
+                      maxLength={60}
+                      value={draftName}
+                      onChange={(event) => setDraftName(event.target.value)}
+                      onBlur={() => rename(passkey.id)}
+                      aria-label={t('passkeyName')}
+                      className="w-full rounded-lg border border-neutral-300 bg-white/70 px-2 py-1 text-sm text-neutral-900 focus:border-brand focus:outline-none dark:border-white/15 dark:bg-neutral-950/60 dark:text-neutral-100"
+                    />
+                  </form>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setRenaming(passkey.id);
+                      setDraftName(passkey.name ?? '');
+                    }}
+                    title={t('renamePasskey')}
+                    className="block max-w-full truncate text-left text-sm font-medium text-neutral-900 hover:underline dark:text-neutral-100"
+                  >
+                    {passkey.name ?? t('unnamedPasskey')}
+                  </button>
+                )}
+                <p className="pt-0.5 text-xs text-neutral-500 dark:text-neutral-400">
+                  {passkey.lastUsedAt
+                    ? t('lastUsed', { date: formatDate(passkey.lastUsedAt) })
+                    : t('addedOn', { date: formatDate(passkey.createdAt) })}
+                  {!passkey.backedUp && ` · ${t('singleDevicePasskey')}`}
+                </p>
+              </ListRow>
             ))}
-          </ul>
+          </List>
         )}
 
         {supported && (
-          <SecondaryButton onClick={add} disabled={pending}>
+          <SecondaryButton tone="primary" onClick={add} disabled={pending}>
             {t('addPasskey')}
           </SecondaryButton>
         )}

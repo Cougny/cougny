@@ -39,7 +39,7 @@ export const EmailSchema = z.string().trim().toLowerCase().email().max(254);
  */
 export const PasswordSchema = z
   .string()
-  .min(12, 'Password must be at least 12 characters.')
+  .min(8, 'Password must be at least 8 characters.')
   .max(200, 'Password must be at most 200 characters.');
 
 /**

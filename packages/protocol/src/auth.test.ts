@@ -154,8 +154,17 @@ describe('RegisterRequestSchema', () => {
     expect(RegisterRequestSchema.safeParse(withoutConduct).success).toBe(false);
   });
 
-  it('rejects a short password', () => {
+  it('rejects a password below the minimum length', () => {
     expect(RegisterRequestSchema.safeParse({ ...valid, password: 'short' }).success).toBe(false);
+    expect(RegisterRequestSchema.safeParse({ ...valid, password: 'a'.repeat(7) }).success).toBe(
+      false,
+    );
+  });
+
+  it('accepts a password at the minimum length', () => {
+    expect(RegisterRequestSchema.safeParse({ ...valid, password: 'a'.repeat(8) }).success).toBe(
+      true,
+    );
   });
 
   it('rejects a username with punctuation', () => {
